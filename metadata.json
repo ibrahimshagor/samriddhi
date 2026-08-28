@@ -1,0 +1,6 @@
+{
+  "name": "Samriddhi Finance Management System",
+  "description": "Cooperative Society and Micro-banking Management System - সমৃদ্ধি ফাইন্যান্স ম্যানেজমেন্ট সিস্টেম",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
