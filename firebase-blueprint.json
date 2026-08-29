@@ -1,0 +1,80 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with role-based access information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "username": { "type": "string" },
+        "nameBn": { "type": "string" },
+        "nameEn": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "mobile": { "type": "string" },
+        "role": { "type": "string", "enum": ["super_admin", "branch_manager", "branch_staff", "customer"] },
+        "institutionId": { "type": "string" },
+        "branchId": { "type": "string" },
+        "membershipId": { "type": "string" },
+        "joiningDate": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "inactive", "suspended"] }
+      },
+      "required": ["id", "username", "nameBn", "nameEn", "role", "membershipId", "status"]
+    },
+    "Customer": {
+      "title": "Customer",
+      "description": "Customer member ledger record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "nameBn": { "type": "string" },
+        "nameEn": { "type": "string" },
+        "mobile": { "type": "string" },
+        "email": { "type": "string" },
+        "accountNo": { "type": "string" },
+        "institutionId": { "type": "string" },
+        "branchId": { "type": "string" },
+        "generalSavingsBalance": { "type": "number" },
+        "totalDeposit": { "type": "number" },
+        "totalWithdrawal": { "type": "number" },
+        "kycStatus": { "type": "string", "enum": ["pending", "approved", "rejected", "not_submitted"] },
+        "status": { "type": "string", "enum": ["active", "inactive"] },
+        "joinedDate": { "type": "string" }
+      },
+      "required": ["id", "nameBn", "nameEn", "accountNo", "status"]
+    },
+    "SupportTicket": {
+      "title": "SupportTicket",
+      "description": "Customer service inquiries and tickets",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "ticketNo": { "type": "string" },
+        "customerId": { "type": "string" },
+        "customerNameBn": { "type": "string" },
+        "customerNameEn": { "type": "string" },
+        "branchId": { "type": "string" },
+        "subjectBn": { "type": "string" },
+        "subjectEn": { "type": "string" },
+        "message": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "in_progress", "solved", "resolved"] },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "customerId", "message", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User accounts collection"
+    },
+    "/customers/{customerId}": {
+      "schema": { "$ref": "#/entities/Customer" },
+      "description": "Customer financial records"
+    },
+    "/tickets/{ticketId}": {
+      "schema": { "$ref": "#/entities/SupportTicket" },
+      "description": "Customer support and complaint tickets"
+    }
+  }
+}

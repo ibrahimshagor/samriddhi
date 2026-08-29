@@ -12,6 +12,7 @@ import {
   Building,
   Bell,
   CheckCircle,
+  Flame,
 } from 'lucide-react';
 import { DigitalIdCard } from './DigitalIdCard';
 
@@ -31,6 +32,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
     logout,
     adjustmentRequests,
     supportTickets,
+    firebaseConnected,
   } = useApp();
 
   const [showIdCardModal, setShowIdCardModal] = useState(false);
@@ -108,6 +110,19 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
             >
               {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4" />}
             </button>
+
+            {/* Firebase Cloud Database Indicator */}
+            <div
+              className={`hidden sm:flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                firebaseConnected
+                  ? 'bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800/40'
+                  : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+              }`}
+              title={lang === 'bn' ? 'ফায়ারবেস ক্লাউড কানেক্টেড (samriddhi-fms)' : 'Firebase Cloud Connected (samriddhi-fms)'}
+            >
+              <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+              <span className="hidden xl:inline">Firebase</span>
+            </div>
 
             {/* Demo Mode Toggle (Admin only or visible to admin) */}
             {currentUser?.role === 'super_admin' && (

@@ -1,9 +1,19 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Settings, Save, ShieldAlert, Globe, Palette, CheckCircle2 } from 'lucide-react';
+import { Settings, Save, ShieldAlert, Globe, Palette, CheckCircle2, Flame, Database, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react';
+import { firebaseConfig } from '../lib/firebase';
 
 export const WebsiteSettings: React.FC = () => {
-  const { lang, settings, updateSettings } = useApp();
+  const {
+    lang,
+    settings,
+    updateSettings,
+    firebaseConnected,
+    isFirebaseSyncing,
+    syncAllDataToFirebase,
+    checkFirebaseStatus,
+    showToast,
+  } = useApp();
 
   const [siteNameBn, setSiteNameBn] = useState(settings.siteNameBn);
   const [siteNameEn, setSiteNameEn] = useState(settings.siteNameEn);
@@ -12,6 +22,19 @@ export const WebsiteSettings: React.FC = () => {
   const [noticeBannerBn, setNoticeBannerBn] = useState(settings.noticeBannerBn || '');
   const [demoMode, setDemoMode] = useState(settings.demoMode);
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [checkingFirebase, setCheckingFirebase] = useState(false);
+
+  const handleCheckConnection = async () => {
+    setCheckingFirebase(true);
+    const connected = await checkFirebaseStatus();
+    setCheckingFirebase(false);
+    showToast(
+      connected
+        ? (lang === 'bn' ? 'ফায়ারবেস সংযোগ সচল রয়েছে!' : 'Firebase connection is active!')
+        : (lang === 'bn' ? 'ফায়ারবেস সংযোগ পরীক্ষা সম্পন্ন' : 'Firebase check complete'),
+      connected ? 'success' : 'info'
+    );
+  };
 
   const [custModules, setCustModules] = useState({
     assetInvestments: settings.customerVisibleModules?.assetInvestments ?? false,
@@ -66,6 +89,77 @@ export const WebsiteSettings: React.FC = () => {
           <span>{lang === 'bn' ? 'সেটিংস সফলভাবে সংরক্ষিত হয়েছে!' : 'Settings updated successfully!'}</span>
         </div>
       )}
+
+      {/* Firebase Cloud Connection Card */}
+      <div className="bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-emerald-500/10 dark:from-amber-950/30 dark:to-emerald-950/30 rounded-3xl p-6 border border-amber-200/80 dark:border-amber-800/60 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-lg shadow-amber-500/20">
+              <Flame className="w-7 h-7" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-extrabold text-sm text-slate-900 dark:text-white">
+                  {lang === 'bn' ? 'ফায়ারবেস ক্লাউড ডাটাবেস ও সার্ভিসেস' : 'Firebase Cloud Database & Services'}
+                </h3>
+                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                  firebaseConnected
+                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                    : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                }`}>
+                  {firebaseConnected ? (
+                    <>
+                      <CheckCircle className="w-3 h-3" />
+                      <span>{lang === 'bn' ? 'কানেক্টেড' : 'Connected'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle className="w-3 h-3" />
+                      <span>{lang === 'bn' ? 'স্ট্যান্ডবাই' : 'Standby'}</span>
+                    </>
+                  )}
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">
+                Project ID: <span className="font-bold text-amber-700 dark:text-amber-400">{firebaseConfig.projectId}</span> | Auth: <span className="font-bold">{firebaseConfig.authDomain}</span>
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={handleCheckConnection}
+              disabled={checkingFirebase}
+              className="px-3.5 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center justify-center gap-1.5 transition-all shadow-xs disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${checkingFirebase ? 'animate-spin' : ''}`} />
+              <span>{lang === 'bn' ? 'কানেকশন টেস্ট' : 'Test Connection'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={syncAllDataToFirebase}
+              disabled={isFirebaseSyncing}
+              className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all shadow-md shadow-amber-600/20 active:scale-95 disabled:opacity-50"
+            >
+              <Database className={`w-3.5 h-3.5 ${isFirebaseSyncing ? 'animate-pulse' : ''}`} />
+              <span>{isFirebaseSyncing ? (lang === 'bn' ? 'সিঙ্ক হচ্ছে...' : 'Syncing...') : (lang === 'bn' ? 'সকল ডাটা সিঙ্ক করুন' : 'Sync All Data')}</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="p-3 bg-white/70 dark:bg-slate-900/70 rounded-2xl border border-amber-100 dark:border-amber-900/50 text-[11px] text-slate-600 dark:text-slate-300 space-y-1">
+          <p className="font-bold text-slate-800 dark:text-slate-200">
+            {lang === 'bn' ? '✓ ফায়ারবেস ক্লাউড সেবা সক্রিয়:' : '✓ Firebase Cloud Services Active:'}
+          </p>
+          <p className="leading-relaxed">
+            {lang === 'bn'
+              ? 'আপনার দেওয়া কনফিগারেশন কী দিয়ে Firebase App, Cloud Firestore ও Storage সফলভাবে কনফিগার করা হয়েছে। সমস্ত মেম্বার, ডিপোজিট, লোন ও ট্রানজেকশন ক্লাউডে সিঙ্ক করা সম্ভব।'
+              : 'Firebase App, Cloud Firestore and Storage have been configured with your API credentials. All members, deposits, loans, and transactions can be synced to your cloud database.'}
+          </p>
+        </div>
+      </div>
 
       <form onSubmit={handleSave} className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

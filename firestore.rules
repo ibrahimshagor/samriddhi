@@ -1,0 +1,15 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Default allow for authenticated users & app services
+    match /{document=**} {
+      allow read, write: if true; // Open access during development / initial configuration
+    }
+  }
+}

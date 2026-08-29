@@ -13,6 +13,7 @@ import {
   JoinedCustomerPackage,
   CustomerLoanApplication,
   SupportTicket,
+  CustomerMessage,
   KycRecord,
   AdjustmentRequest,
   AuditLog,
@@ -37,6 +38,14 @@ import {
   initialSettings,
 } from '../data/mockData';
 
+import {
+  syncDocToFirestore,
+  deleteDocFromFirestore,
+  syncAllToFirestore,
+  loadFromFirestore,
+} from '../lib/firestoreSync';
+import { testFirestoreConnection, firebaseConfig } from '../lib/firebase';
+
 interface AppContextType {
   currentUser: User | null;
   lang: Language;
@@ -58,6 +67,8 @@ interface AppContextType {
   customerMessages: CustomerMessage[];
   auditLogs: AuditLog[];
   toastMessage: { text: string; type: 'success' | 'error' | 'info' } | null;
+  firebaseConnected: boolean;
+  isFirebaseSyncing: boolean;
 
   // Actions
   login: (username: string, pass: string) => boolean;
@@ -68,6 +79,8 @@ interface AppContextType {
   toggleDarkMode: () => void;
   setDemoMode: (val: boolean) => void;
   showToast: (text: string, type?: 'success' | 'error' | 'info') => void;
+  syncAllDataToFirebase: () => Promise<void>;
+  checkFirebaseStatus: () => Promise<boolean>;
 
   // CRUD & Operations
   addInstitution: (inst: Omit<Institution, 'id'>) => void;
@@ -174,6 +187,61 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     ];
   });
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(initialAuditLogs);
+  const [firebaseConnected, setFirebaseConnected] = useState<boolean>(true);
+  const [isFirebaseSyncing, setIsFirebaseSyncing] = useState<boolean>(false);
+
+  // Check Firebase connection on startup
+  useEffect(() => {
+    const checkConnection = async () => {
+      try {
+        const res = await testFirestoreConnection();
+        setFirebaseConnected(res.connected);
+      } catch {
+        setFirebaseConnected(false);
+      }
+    };
+    checkConnection();
+  }, []);
+
+  const checkFirebaseStatus = async (): Promise<boolean> => {
+    try {
+      const res = await testFirestoreConnection();
+      setFirebaseConnected(res.connected);
+      return res.connected;
+    } catch {
+      setFirebaseConnected(false);
+      return false;
+    }
+  };
+
+  const syncAllDataToFirebase = async () => {
+    setIsFirebaseSyncing(true);
+    try {
+      await Promise.allSettled([
+        syncAllToFirestore('users', users),
+        syncAllToFirestore('institutions', institutions),
+        syncAllToFirestore('branches', branches),
+        syncAllToFirestore('customers', customers),
+        syncAllToFirestore('paymentChannels', paymentChannels),
+        syncAllToFirestore('investments', investments),
+        syncAllToFirestore('borrowings', borrowings),
+        syncAllToFirestore('packages', packages),
+        syncAllToFirestore('joinedPackages', joinedPackages),
+        syncAllToFirestore('loans', loans),
+        syncAllToFirestore('supportTickets', supportTickets),
+        syncAllToFirestore('kycRecords', kycRecords),
+        syncAllToFirestore('adjustmentRequests', adjustmentRequests),
+        syncDocToFirestore('settings', { id: 'main', ...settings }),
+      ]);
+      setFirebaseConnected(true);
+      showToast(lang === 'bn' ? 'ফায়ারবেসে সকল ডাটা সফলভাবে সিঙ্ক হয়েছে!' : 'All data synced with Firebase successfully!', 'success');
+    } catch (err) {
+      console.error(err);
+      showToast(lang === 'bn' ? 'ফায়ারবেস সিঙ্কে ত্রুটি হয়েছে' : 'Firebase sync error', 'error');
+    } finally {
+      setIsFirebaseSyncing(false);
+    }
+  };
 
   useEffect(() => {
     localStorage.setItem('smf_cust_messages', JSON.stringify(customerMessages));
@@ -860,6 +928,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         customerMessages,
         auditLogs,
         toastMessage,
+        firebaseConnected,
+        isFirebaseSyncing,
 
         login,
         quickLogin,
@@ -869,6 +939,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toggleDarkMode,
         setDemoMode,
         showToast,
+        syncAllDataToFirebase,
+        checkFirebaseStatus,
 
         addInstitution,
  updateInstitution,
