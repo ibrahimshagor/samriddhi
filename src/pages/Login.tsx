@@ -73,9 +73,20 @@ export const Login: React.FC = () => {
       <div className="max-w-md w-full mx-auto my-auto py-6">
         <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200 dark:border-slate-800">
           <div className="text-center mb-6">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white font-black text-2xl flex items-center justify-center mx-auto shadow-lg shadow-emerald-600/30 mb-3">
-              সম
-            </div>
+            {settings?.logoSvg ? (
+              <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-lg shadow-emerald-600/30 mb-3 mx-auto flex items-center justify-center bg-emerald-700">
+                <img
+                  src={settings.logoSvg}
+                  alt="Logo"
+                  className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+            ) : (
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white font-black text-2xl flex items-center justify-center mx-auto shadow-lg shadow-emerald-600/30 mb-3">
+                সম
+              </div>
+            )}
             <h2 className="text-xl font-extrabold text-slate-900 dark:text-white">
               {lang === 'bn' ? settings.siteNameBn : settings.siteNameEn}
             </h2>

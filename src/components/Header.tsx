@@ -13,8 +13,10 @@ import {
   Bell,
   CheckCircle,
   Flame,
+  Cloud,
 } from 'lucide-react';
 import { DigitalIdCard } from './DigitalIdCard';
+import { GoogleDriveBackupModal } from './GoogleDriveBackupModal';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -37,6 +39,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
 
   const [showIdCardModal, setShowIdCardModal] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showDriveModal, setShowDriveModal] = useState(false);
 
   const pendingAdjustments = adjustmentRequests.filter((a) => a.status === 'pending').length;
   const pendingTickets = supportTickets.filter((t) => t.status === 'pending').length;
@@ -75,9 +78,20 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
             </button>
 
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-black text-lg shadow-md shadow-emerald-600/20">
-                সম
-              </div>
+              {settings?.logoSvg ? (
+                <div className="w-9 h-9 rounded-xl overflow-hidden shadow-md shadow-emerald-600/20 flex items-center justify-center bg-emerald-700 shrink-0">
+                  <img
+                    src={settings.logoSvg}
+                    alt="Logo"
+                    className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                </div>
+              ) : (
+                <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-black text-lg shadow-md shadow-emerald-600/20 shrink-0">
+                  সম
+                </div>
+              )}
               <div className="hidden sm:block">
                 <h1 className="font-extrabold text-base text-slate-900 dark:text-white leading-tight">
                   {lang === 'bn' ? settings.siteNameBn : settings.siteNameEn}
@@ -123,6 +137,18 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
               <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
               <span className="hidden xl:inline">Firebase</span>
             </div>
+
+            {/* Google Drive Backup Button (Super Admin) */}
+            {currentUser?.role === 'super_admin' && (
+              <button
+                onClick={() => setShowDriveModal(true)}
+                className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 text-xs font-bold border border-blue-200/70 dark:border-blue-800/50 transition-colors shadow-2xs cursor-pointer"
+                title={lang === 'bn' ? 'গুগল ড্রাইভ ব্যাকআপ ও রিস্টোর' : 'Google Drive Backup & Restore'}
+              >
+                <Cloud className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                <span>{lang === 'bn' ? 'ড্রাইভ ব্যাকআপ' : 'Drive Backup'}</span>
+              </button>
+            )}
 
             {/* Demo Mode Toggle (Admin only or visible to admin) */}
             {currentUser?.role === 'super_admin' && (
@@ -230,6 +256,14 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
             <DigitalIdCard user={currentUser} onClose={() => setShowIdCardModal(false)} />
           </div>
         </div>
+      )}
+
+      {/* Google Drive Backup & Restore Modal */}
+      {showDriveModal && (
+        <GoogleDriveBackupModal
+          isOpen={showDriveModal}
+          onClose={() => setShowDriveModal(false)}
+        />
       )}
     </>
   );

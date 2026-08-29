@@ -662,6 +662,7 @@ export const initialSettings: SystemSettings = {
   developerPoweredBy: 'TIKMERK IT',
   developerWebsite: 'www.tikmerk.com',
   demoMode: true, // Demo Mode ON by default so Quick Login buttons show
+  logoSvg: '/favicon.svg',
   defaultProfitRatePct: 12,
   defaultGovVatPct: 15,
   generalSavingsInterestPct: 6.5,

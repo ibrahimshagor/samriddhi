@@ -90,9 +90,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Drawer Header */}
         <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white font-bold flex items-center justify-center text-sm shadow-md">
-              SF
-            </div>
+            {settings?.logoSvg ? (
+              <div className="w-8 h-8 rounded-xl overflow-hidden shadow-md flex items-center justify-center bg-emerald-700 shrink-0">
+                <img
+                  src={settings.logoSvg}
+                  alt="Logo"
+                  className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+            ) : (
+              <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white font-bold flex items-center justify-center text-sm shadow-md shrink-0">
+                SF
+              </div>
+            )}
             <div>
               <p className="font-extrabold text-sm text-slate-900 dark:text-white">
                 {lang === 'bn' ? 'সমৃদ্ধি নেভিগেশন' : 'Samriddhi Navigation'}

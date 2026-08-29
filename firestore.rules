@@ -2,14 +2,153 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Global Safety helper functions
-    function isSignedIn() {
+    // Helper functions for Authentication & Role Checking
+    function isAuthenticated() {
       return request.auth != null;
     }
 
-    // Default allow for authenticated users & app services
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isSuperAdmin() {
+      return isAuthenticated() && (
+        getUserData().role == 'super_admin' || 
+        request.auth.token.role == 'super_admin' ||
+        request.auth.token.email == 'admin.samriddhi@gmail.com'
+      );
+    }
+
+    function isBranchStaffOrManager() {
+      return isAuthenticated() && (
+        getUserData().role in ['super_admin', 'branch_manager', 'branch_staff']
+      );
+    }
+
+    function isCustomer() {
+      return isAuthenticated() && getUserData().role == 'customer';
+    }
+
+    // 1. Users collection:
+    // - Authenticated users can read their own profile
+    // - Super Admins and Staff can read/manage all users
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isBranchStaffOrManager());
+      allow create, update: if isAuthenticated() && (request.auth.uid == userId || isBranchStaffOrManager());
+      allow delete: if isSuperAdmin();
+    }
+
+    // 2. Customers collection:
+    // - Customers can only read their own customer ledger record
+    // - Branch Managers and Super Admins can read and write customer data
+    match /customers/{customerId} {
+      allow read: if isAuthenticated() && (
+        isBranchStaffOrManager() || 
+        resource.data.userId == request.auth.uid ||
+        resource.data.email == request.auth.token.email
+      );
+      allow create, update: if isBranchStaffOrManager();
+      allow delete: if isSuperAdmin();
+    }
+
+    // 3. Loans & Applications:
+    // - Customer can see their own loans
+    // - Staff/Admin can view and manage all loans
+    match /loans/{loanId} {
+      allow read: if isAuthenticated() && (
+        isBranchStaffOrManager() || 
+        resource.data.customerId == request.auth.uid ||
+        resource.data.customerEmail == request.auth.token.email
+      );
+      allow create: if isAuthenticated();
+      allow update, delete: if isBranchStaffOrManager();
+    }
+
+    // 4. Support Tickets:
+    // - Customer can create and see their own tickets
+    // - Staff/Admin can view, reply and update status
+    match /supportTickets/{ticketId} {
+      allow read: if isAuthenticated() && (
+        isBranchStaffOrManager() ||
+        resource.data.customerId == request.auth.uid ||
+        resource.data.customerEmail == request.auth.token.email
+      );
+      allow create: if isAuthenticated();
+      allow update, delete: if isBranchStaffOrManager();
+    }
+
+    // 5. KYC Records:
+    // - Customer can view/upload their own KYC
+    // - Staff/Admin can review and approve
+    match /kycRecords/{kycId} {
+      allow read: if isAuthenticated() && (
+        isBranchStaffOrManager() ||
+        resource.data.customerId == request.auth.uid
+      );
+      allow create, update: if isAuthenticated() && (
+        resource.data.customerId == request.auth.uid || isBranchStaffOrManager()
+      );
+      allow delete: if isSuperAdmin();
+    }
+
+    // 6. Savings & Loan Schemes / Packages:
+    // - Anyone authenticated can view available packages
+    // - Only Admin can create/modify packages
+    match /packages/{packageId} {
+      allow read: if isAuthenticated();
+      allow write: if isBranchStaffOrManager();
+    }
+
+    // 7. Joined Packages:
+    match /joinedPackages/{id} {
+      allow read: if isAuthenticated() && (
+        isBranchStaffOrManager() || resource.data.customerId == request.auth.uid
+      );
+      allow write: if isBranchStaffOrManager();
+    }
+
+    // 8. Branches & Institutions:
+    // - Read allowed for all authenticated users
+    // - Write restricted to Super Admin
+    match /institutions/{instId} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin();
+    }
+
+    match /branches/{branchId} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin();
+    }
+
+    // 9. Financial Ledgers, Investments, Borrowings, Payment Channels:
+    // - Strictly restricted to Staff and Super Admin
+    match /paymentChannels/{channelId} {
+      allow read, write: if isBranchStaffOrManager();
+    }
+    match /investments/{invId} {
+      allow read, write: if isBranchStaffOrManager();
+    }
+    match /borrowings/{borrowId} {
+      allow read, write: if isBranchStaffOrManager();
+    }
+    match /adjustmentRequests/{reqId} {
+      allow read, write: if isBranchStaffOrManager();
+    }
+
+    // 10. System Settings & Audit Logs:
+    match /settings/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin();
+    }
+    match /auditLogs/{logId} {
+      allow read: if isBranchStaffOrManager();
+      allow create: if isAuthenticated();
+      allow update, delete: if false; // Immutable audit trail
+    }
+
+    // Default fallback: Block everything else
     match /{document=**} {
-      allow read, write: if true; // Open access during development / initial configuration
+      allow read, write: if false;
     }
   }
 }

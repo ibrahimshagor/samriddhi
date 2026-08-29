@@ -46,6 +46,10 @@ import {
 } from '../lib/firestoreSync';
 import { testFirestoreConnection, firebaseConfig } from '../lib/firebase';
 
+export const FIXED_DEVELOPER_NAME = 'Md. Ibrahim Hossain';
+export const FIXED_DEVELOPER_POWERED_BY = 'TIKMERK IT';
+export const FIXED_DEVELOPER_WEBSITE = 'www.tikmerk.com';
+
 interface AppContextType {
   currentUser: User | null;
   lang: Language;
@@ -136,6 +140,7 @@ interface AppContextType {
   reviewAdjustmentRequest: (reqId: string, status: 'approved' | 'rejected') => void;
 
   updateSettings: (newSettings: Partial<SystemSettings>) => void;
+  restoreFullBackup: (backupPayload: any) => boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -156,7 +161,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [settings, setSettings] = useState<SystemSettings>(() => {
     const saved = localStorage.getItem('smf_settings');
-    return saved ? JSON.parse(saved) : initialSettings;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return {
+          ...initialSettings,
+          ...parsed,
+          logoSvg: parsed.logoSvg || initialSettings.logoSvg || '/favicon.svg',
+          developerName: FIXED_DEVELOPER_NAME,
+          developerPoweredBy: FIXED_DEVELOPER_POWERED_BY,
+          developerWebsite: FIXED_DEVELOPER_WEBSITE,
+        };
+      } catch {
+        return initialSettings;
+      }
+    }
+    return initialSettings;
   });
 
   const [users, setUsers] = useState<User[]>(initialUsers);
@@ -901,8 +921,70 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateSettings = (newSettings: Partial<SystemSettings>) => {
-    setSettings((prev) => ({ ...prev, ...newSettings }));
+    setSettings((prev) => ({
+      ...prev,
+      ...newSettings,
+      developerName: FIXED_DEVELOPER_NAME,
+      developerPoweredBy: FIXED_DEVELOPER_POWERED_BY,
+      developerWebsite: FIXED_DEVELOPER_WEBSITE,
+    }));
     showToast(lang === 'bn' ? 'ওয়েবসাইট সেটিংস সংরক্ষিত হয়েছে' : 'Settings Updated', 'success');
+  };
+
+  const restoreFullBackup = (backupPayload: any): boolean => {
+    try {
+      const data = backupPayload?.data || backupPayload;
+      if (!data || !Array.isArray(data.users || data.customers)) {
+        showToast(lang === 'bn' ? 'অকার্যকর ব্যাকআপ ফাইল ফরম্যাট' : 'Invalid backup file format', 'error');
+        return false;
+      }
+
+      if (data.users) setUsers(data.users);
+      if (data.institutions) setInstitutions(data.institutions);
+      if (data.branches) setBranches(data.branches);
+      if (data.customers) setCustomers(data.customers);
+      if (data.paymentChannels) setPaymentChannels(data.paymentChannels);
+      if (data.investments) setInvestments(data.investments);
+      if (data.borrowings) setBorrowings(data.borrowings);
+      if (data.packages) setPackages(data.packages);
+      if (data.joinedPackages) setJoinedPackages(data.joinedPackages);
+      if (data.loans) setLoans(data.loans);
+      if (data.supportTickets) setSupportTickets(data.supportTickets);
+      if (data.kycRecords) setKycRecords(data.kycRecords);
+      if (data.adjustmentRequests) setAdjustmentRequests(data.adjustmentRequests);
+      if (data.settings) {
+        setSettings({
+          ...data.settings,
+          developerName: FIXED_DEVELOPER_NAME,
+          developerPoweredBy: FIXED_DEVELOPER_POWERED_BY,
+          developerWebsite: FIXED_DEVELOPER_WEBSITE,
+        });
+      }
+
+      // Auto-sync the restored state to Firestore
+      setTimeout(() => {
+        syncAllDataToFirebase();
+      }, 500);
+
+      showToast(
+        lang === 'bn'
+          ? 'সফলভাবে গুগল ড্রাইভ ব্যাকআপ থেকে সম্পূর্ণ ডাটাবেস রিস্টোর করা হয়েছে!'
+          : 'Database successfully restored from backup snapshot!',
+        'success'
+      );
+      logAuditAction(
+        'ডাটাবেস রিস্টোর সম্পন্ন',
+        'Database Restored from Drive',
+        'ব্যাকআপ ও রিস্টোর',
+        'Backup & Restore',
+        `Restored by: ${currentUser?.username || 'admin'}`
+      );
+      return true;
+    } catch (err) {
+      console.error('Failed to restore backup:', err);
+      showToast(lang === 'bn' ? 'ডাটাবেস রিস্টোরে ত্রুটি ঘটেছে' : 'Failed to restore backup snapshot', 'error');
+      return false;
+    }
   };
 
   return (
@@ -995,6 +1077,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         reviewAdjustmentRequest,
 
         updateSettings,
+        restoreFullBackup,
       }}
     >
       {children}

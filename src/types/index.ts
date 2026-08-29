@@ -345,6 +345,7 @@ export interface SystemSettings {
   developerPoweredBy: string;
   developerWebsite: string;
   demoMode: boolean;
+  logoSvg?: string;
   defaultProfitRatePct: number;
   defaultGovVatPct: number;
   generalSavingsInterestPct: number;
