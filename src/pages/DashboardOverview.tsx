@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { formatBDT, formatDate } from '../utils/formatters';
 import {
@@ -17,6 +17,12 @@ import {
   SlidersHorizontal,
   PlusCircle,
   PiggyBank,
+  Inbox,
+  MessageSquare,
+  Reply,
+  Send,
+  Megaphone,
+  FileText,
 } from 'lucide-react';
 
 export const DashboardOverview: React.FC<{ onNavigate?: (page: string) => void }> = ({ onNavigate = (_page: string) => {} }) => {
@@ -34,27 +40,55 @@ export const DashboardOverview: React.FC<{ onNavigate?: (page: string) => void }
     kycRecords,
     supportTickets,
     customerMessages,
+    notices,
+    getAccessibleNotices,
+    replyToCustomerMessage,
+    activeBranchId,
+    setActiveBranchId,
+    getUserAccessibleBranches,
   } = useApp();
+
+  const [replyInputMap, setReplyInputMap] = useState<Record<string, string>>({});
+  const [activeReplyId, setActiveReplyId] = useState<string | null>(null);
 
   if (!currentUser) return null;
 
   const role = currentUser.role;
+  const isSuperAdmin = role === 'super_admin';
+  const accessibleBranches = getUserAccessibleBranches();
 
-  // Filter entities according to user scope
-  const filteredCustomers =
-    role === 'super_admin'
-      ? customers
-      : customers.filter((c) => c.branchId === currentUser.branchId);
+  // Filter entities according to activeBranchId and user accessible branches
+  const accessibleBranchIds = accessibleBranches.map((b) => b.id);
 
-  const filteredInvestments =
-    role === 'super_admin'
-      ? investments
-      : investments.filter((i) => i.branchId === currentUser.branchId);
+  const filteredCustomers = (customers || []).filter((c) => {
+    if (isSuperAdmin) {
+      return activeBranchId === 'all' ? true : c.branchId === activeBranchId;
+    }
+    if (activeBranchId === 'all') {
+      return accessibleBranchIds.includes(c.branchId);
+    }
+    return c.branchId === activeBranchId;
+  });
 
-  const filteredLoans =
-    role === 'super_admin'
-      ? loans
-      : loans.filter((l) => l.branchId === currentUser.branchId);
+  const filteredInvestments = (investments || []).filter((i) => {
+    if (isSuperAdmin) {
+      return activeBranchId === 'all' ? true : i.branchId === activeBranchId;
+    }
+    if (activeBranchId === 'all') {
+      return accessibleBranchIds.includes(i.branchId);
+    }
+    return i.branchId === activeBranchId;
+  });
+
+  const filteredLoans = (loans || []).filter((l) => {
+    if (isSuperAdmin) {
+      return activeBranchId === 'all' ? true : l.branchId === activeBranchId;
+    }
+    if (activeBranchId === 'all') {
+      return accessibleBranchIds.includes(l.branchId);
+    }
+    return l.branchId === activeBranchId;
+  });
 
   // Financial Summaries
   const totalGeneralSavings = filteredCustomers.reduce((acc, c) => acc + c.generalSavingsBalance, 0);
@@ -64,9 +98,16 @@ export const DashboardOverview: React.FC<{ onNavigate?: (page: string) => void }
   const totalLoansDisbursed = filteredLoans.reduce((acc, l) => acc + l.requestedAmount, 0);
 
   // Customer-specific figures
-  const myCustomerRecord = (customers || []).find((c) => c.userId === currentUser.id) || (customers || [])[0];
-  const myJoinedPkgs = (joinedPackages || []).filter((jp) => jp.customerId === myCustomerRecord?.id);
-  const myLoans = (loans || []).filter((l) => l.customerId === myCustomerRecord?.id);
+  const myCustomerRecord =
+    role === 'customer'
+      ? (customers || []).find((c) => c.userId === currentUser.id || c.id === currentUser.id || c.mobile === currentUser.mobile) || null
+      : null;
+  const myJoinedPkgs = myCustomerRecord
+    ? (joinedPackages || []).filter((jp) => jp.customerId === myCustomerRecord.id)
+    : [];
+  const myLoans = myCustomerRecord
+    ? (loans || []).filter((l) => l.customerId === myCustomerRecord.id)
+    : [];
 
   const pendingAdjCount = (adjustmentRequests || []).filter((a) => a.status === 'pending').length;
   const pendingKycCount = (kycRecords || []).filter((k) => k.status === 'pending').length;
@@ -205,10 +246,10 @@ export const DashboardOverview: React.FC<{ onNavigate?: (page: string) => void }
               {lang === 'bn' ? 'আপনার সাধারণ সঞ্চয় ব্যালেন্স' : 'My General Savings Balance'}
             </span>
             <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-2">
-              {formatBDT(myCustomerRecord.generalSavingsBalance, lang)}
+              {formatBDT(myCustomerRecord?.generalSavingsBalance || 0, lang)}
             </p>
             <p className="text-[11px] text-slate-500 mt-1">
-              {lang === 'bn' ? 'হিসাব নম্বর:' : 'Account No:'} <span className="font-mono font-bold">{myCustomerRecord.accountNo}</span>
+              {lang === 'bn' ? 'হিসাব নম্বর:' : 'Account No:'} <span className="font-mono font-bold">{myCustomerRecord?.accountNo || 'N/A'}</span>
             </p>
           </div>
 
@@ -233,16 +274,16 @@ export const DashboardOverview: React.FC<{ onNavigate?: (page: string) => void }
             <div className="mt-3">
               <span
                 className={`inline-block px-3 py-1 rounded-full text-xs font-extrabold capitalize ${
-                  myCustomerRecord.kycStatus === 'approved'
+                  myCustomerRecord?.kycStatus === 'approved'
                     ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                    : myCustomerRecord.kycStatus === 'pending'
+                    : myCustomerRecord?.kycStatus === 'pending'
                     ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
                     : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
                 }`}
               >
-                {myCustomerRecord.kycStatus === 'approved'
+                {myCustomerRecord?.kycStatus === 'approved'
                   ? 'অনুমোদিত (Approved)'
-                  : myCustomerRecord.kycStatus === 'pending'
+                  : myCustomerRecord?.kycStatus === 'pending'
                   ? 'যাচাইধীন (Pending)'
                   : 'অসম্পূর্ণ (Incomplete)'}
               </span>
@@ -259,37 +300,111 @@ export const DashboardOverview: React.FC<{ onNavigate?: (page: string) => void }
 
       {/* Customer Inbox Messages from Admin / Branch */}
       {role === 'customer' && (
-        <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
+        <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-            <h3 className="font-extrabold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-              <Clock className="w-4 h-4 text-emerald-600" />
-              <span>{lang === 'bn' ? 'এডমিন ও শাখা অফিসের অফিশিয়াল মেসেজসমূহ' : 'Official Admin Messages & Notices'}</span>
-            </h3>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-              {((customerMessages || []).filter((m) => m.customerId === myCustomerRecord?.id) || []).length} {lang === 'bn' ? 'টি বার্তা' : 'Messages'}
-            </span>
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
+                <Inbox className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-sm text-slate-900 dark:text-white">
+                  {lang === 'bn' ? 'অফিশিয়াল ইনবক্স ও বার্তা' : 'Official Inbox & Messages'}
+                </h3>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  {lang === 'bn' ? 'এডমিন বা শাখা থেকে প্রেরিত বার্তা দেখুন ও সরাসরি উত্তর দিন' : 'Read official notices and reply directly'}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => onNavigate('inbox')}
+                className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-emerald-700 dark:text-emerald-300 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <span>{lang === 'bn' ? 'সব বার্তা দেখুন' : 'Full Inbox'}</span>
+                <ArrowUpRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
 
           {((customerMessages || []).filter((m) => m.customerId === myCustomerRecord?.id) || []).length === 0 ? (
             <p className="text-xs text-slate-400 italic py-2">
-              {lang === 'bn' ? 'আপনার জন্য নতুন কোনো অফিশিয়াল নোটিশ বা মেসেজ নেই।' : 'No official notices or messages for you yet.'}
+              {lang === 'bn' ? 'আপনার জন্য নতুন কোনো অফিশিয়াল নোটিশ বা বার্তা নেই।' : 'No official notices or messages for you yet.'}
             </p>
           ) : (
-            <div className="space-y-2.5">
-              {((customerMessages || []).filter((m) => m.customerId === myCustomerRecord?.id) || []).map((msg) => (
+            <div className="space-y-3">
+              {((customerMessages || []).filter((m) => m.customerId === myCustomerRecord?.id) || []).slice(0, 3).map((msg) => (
                 <div
                   key={msg.id}
-                  className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+                  className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/60 space-y-2.5 transition-all"
                 >
-                  <div className="space-y-1">
-                    <p className="text-xs font-bold text-slate-900 dark:text-white">{msg.message}</p>
-                    <p className="text-[10px] text-slate-400 font-mono">
-                      {lang === 'bn' ? 'প্রেরক: এডমিন/শাখা অফিসার' : 'From: Admin/Branch Officer'} • {formatDate(msg.createdAt, lang)}
-                    </p>
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+                    <div className="space-y-1">
+                      {msg.subject && (
+                        <p className="text-xs font-black text-emerald-700 dark:text-emerald-400">
+                          📌 {msg.subject}
+                        </p>
+                      )}
+                      <p className="text-xs font-semibold text-slate-900 dark:text-white leading-relaxed">
+                        {msg.message}
+                      </p>
+                      <p className="text-[10px] text-slate-400 font-mono">
+                        {lang === 'bn' ? 'প্রেরক:' : 'From:'} {msg.senderName || (lang === 'bn' ? 'এডমিন/শাখা অফিসার' : 'Admin/Branch Officer')} • {formatDate(msg.createdAt, lang)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0 self-start">
+                      {!msg.isRead && (
+                        <span className="px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 text-[9px] font-black animate-pulse">
+                          {lang === 'bn' ? 'নতুন' : 'NEW'}
+                        </span>
+                      )}
+                      <button
+                        onClick={() => {
+                          if (activeReplyId === msg.id) {
+                            setActiveReplyId(null);
+                          } else {
+                            setActiveReplyId(msg.id);
+                          }
+                        }}
+                        className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] flex items-center gap-1 transition-colors cursor-pointer"
+                      >
+                        <Reply className="w-3 h-3" />
+                        <span>{lang === 'bn' ? 'উত্তর দিন' : 'Reply'}</span>
+                      </button>
+                    </div>
                   </div>
-                  <span className="self-start sm:self-center px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-[10px] font-extrabold shrink-0">
-                    {lang === 'bn' ? 'অফিশিয়াল' : 'OFFICIAL'}
-                  </span>
+
+                  {/* Inline Fast Reply Box */}
+                  {activeReplyId === msg.id && (
+                    <div className="pt-2 border-t border-slate-200 dark:border-slate-700/80 flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={replyInputMap[msg.id] || ''}
+                        onChange={(e) => setReplyInputMap({ ...replyInputMap, [msg.id]: e.target.value })}
+                        placeholder={lang === 'bn' ? 'আপনার উত্তর লিখুন...' : 'Type your quick reply...'}
+                        className="flex-1 px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && (replyInputMap[msg.id] || '').trim()) {
+                            replyToCustomerMessage(msg.id, replyInputMap[msg.id]);
+                            setReplyInputMap({ ...replyInputMap, [msg.id]: '' });
+                            setActiveReplyId(null);
+                          }
+                        }}
+                      />
+                      <button
+                        onClick={() => {
+                          if ((replyInputMap[msg.id] || '').trim()) {
+                            replyToCustomerMessage(msg.id, replyInputMap[msg.id]);
+                            setReplyInputMap({ ...replyInputMap, [msg.id]: '' });
+                            setActiveReplyId(null);
+                          }
+                        }}
+                        className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1 cursor-pointer"
+                      >
+                        <Send className="w-3 h-3" />
+                        <span>{lang === 'bn' ? 'পাঠান' : 'Send'}</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -336,6 +451,76 @@ export const DashboardOverview: React.FC<{ onNavigate?: (page: string) => void }
           </div>
         </div>
       )}
+
+      {/* Latest Official Notices & Circulars Highlight Widget */}
+      {(() => {
+        const userNotices = getAccessibleNotices ? getAccessibleNotices(currentUser) : notices || [];
+        const topNotices = userNotices.slice(0, 2);
+
+        return (
+          <div className="bg-linear-to-r from-amber-500/10 via-orange-500/5 to-transparent bg-white dark:bg-slate-900 rounded-3xl p-6 border border-amber-200/80 dark:border-amber-900/40 shadow-xs space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-amber-100 dark:border-amber-900/30">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300">
+                  <Megaphone className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-sm text-slate-900 dark:text-white">
+                    {lang === 'bn' ? 'অফিশিয়াল সার্কুলার ও নোটিশ বোর্ড' : 'Official Circulars & Notice Board'}
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    {lang === 'bn' ? 'প্রধান কার্যালয় ও শাখার সর্বশেষ আদেশ ও পরিপত্রসমূহ' : 'Latest institutional directives and memos'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => onNavigate('notices')}
+                className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+              >
+                <span>{lang === 'bn' ? 'সকল নোটিশ ও A4 প্রিন্ট' : 'View All & Print'}</span>
+                <ArrowUpRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {topNotices.length === 0 ? (
+              <p className="text-xs text-slate-400 italic py-2">
+                {lang === 'bn' ? 'বর্তমানে কোনো সক্রিয় নোটিশ নেই।' : 'No active notices at this time.'}
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {topNotices.map((n) => (
+                  <div
+                    key={n.id}
+                    onClick={() => onNavigate('notices')}
+                    className="p-4 rounded-2xl bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 hover:border-amber-400 transition-all cursor-pointer group shadow-xs flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 mb-1.5">
+                        <span className="font-bold text-amber-700 dark:text-amber-400">
+                          {n.scope === 'global' ? '👑 গ্লোবাল' : n.scope === 'institution' ? '🏛️ প্রতিষ্ঠান' : '🏢 শাখা'} • {n.memoNo}
+                        </span>
+                        <span>{n.publishDate}</span>
+                      </div>
+                      <h4 className="text-xs font-black text-slate-900 dark:text-white group-hover:text-amber-600 transition-colors line-clamp-1">
+                        {lang === 'bn' ? n.titleBn : n.titleEn || n.titleBn}
+                      </h4>
+                      <p className="text-[11px] text-slate-600 dark:text-slate-300 line-clamp-2 mt-1 leading-relaxed">
+                        {lang === 'bn' ? n.contentBn : n.contentEn || n.contentBn}
+                      </p>
+                    </div>
+                    <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-[10px] text-slate-500">
+                      <span>✍️ {n.signatoryName || n.publishedBy}</span>
+                      <span className="text-amber-600 dark:text-amber-400 font-bold flex items-center gap-0.5">
+                        {lang === 'bn' ? 'বিস্তারিত দেখুন' : 'Read Notice'} →
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Quick Access Services Shortcuts Grid */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-xs">

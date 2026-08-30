@@ -634,6 +634,7 @@ export const WebsiteSettings: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2">
             {[
+              { key: 'inboxMessages', bn: 'ইনবক্স ও অফিশিয়াল বার্তা (Inbox & Messages)', en: 'Inbox & Official Messages' },
               { key: 'assetInvestments', bn: '৮. সম্পদ ও বিনিয়োগ ব্যবস্থাপনা', en: 'Asset & Investment' },
               { key: 'institutionalBorrowings', bn: '৯. প্রতিষ্ঠানের গৃহীত ঋণ', en: 'Institutional Borrowings' },
               { key: 'reportsAudit', bn: '১২. রিপোর্টস ও অডিট লগ', en: 'Reports & Audit Logs' },
@@ -645,7 +646,7 @@ export const WebsiteSettings: React.FC = () => {
               { key: 'institutions', bn: '১. প্রতিষ্ঠান নির্দেশিকা', en: 'Institutions Info' },
             ].map((item) => {
               const k = item.key as keyof typeof custModules;
-              const isVisible = custModules[k];
+              const isVisible = custModules[k] !== false;
               return (
                 <div
                   key={item.key}

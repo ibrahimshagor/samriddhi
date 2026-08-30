@@ -5,8 +5,9 @@ import { Sidebar } from './components/Sidebar';
 import { Footer } from './components/Footer';
 import { Login } from './pages/Login';
 
-// 17 Main Pages
+// 18 Main Pages
 import { DashboardOverview } from './pages/DashboardOverview';
+import { InboxMessages } from './pages/InboxMessages';
 import { MultiInstitutionManagement } from './pages/MultiInstitutionManagement';
 import { InstitutionsView } from './pages/InstitutionsView';
 import { BranchManagement } from './pages/BranchManagement';
@@ -23,6 +24,7 @@ import { ProfileSettings } from './pages/ProfileSettings';
 import { UserManagement } from './pages/UserManagement';
 import { KycForm } from './pages/KycForm';
 import { AdjustmentRequests } from './pages/AdjustmentRequests';
+import { NoticeBoard } from './pages/NoticeBoard';
 
 const AppContent: React.FC = () => {
   const { currentUser } = useApp();
@@ -50,6 +52,10 @@ const AppContent: React.FC = () => {
     switch (activeMenu) {
       case 'dashboard':
         return <DashboardOverview onNavigate={setActiveMenu} />;
+      case 'inbox':
+        return <InboxMessages onNavigate={setActiveMenu} />;
+      case 'notices':
+        return <NoticeBoard />;
       case 'multi_institution':
         return <MultiInstitutionManagement />;
       case 'institutions':
@@ -89,7 +95,10 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans flex flex-col transition-colors">
-      <Header onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
+      <Header
+        onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+        onNavigate={setActiveMenu}
+      />
 
       <div className="flex-1 flex max-w-7xl w-full mx-auto px-4 py-6 gap-6 overflow-hidden">
         <Sidebar

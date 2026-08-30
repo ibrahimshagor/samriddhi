@@ -24,6 +24,8 @@ import {
   PieChart,
   DollarSign,
   TrendingUp,
+  Inbox,
+  Megaphone,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -39,8 +41,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
   activeMenu,
   setActiveMenu,
 }) => {
-  const { currentUser, lang, settings, adjustmentRequests, supportTickets, kycRecords } = useApp();
-  const [openSubmenu, setOpenSubmenu] = React.useState<string | null>('asset_investment');
+  const {
+    currentUser,
+    lang,
+    settings,
+    customers,
+    customerMessages,
+    notices,
+    getAccessibleNotices,
+    adjustmentRequests,
+    supportTickets,
+    kycRecords,
+    joinedPackages,
+    savingsRequests,
+    loans,
+    activeBranchId,
+    getUserAccessibleBranches,
+  } = useApp();
+  const [openSubmenu, setOpenSubmenu] = React.useState<string | null>('packages');
 
   if (!currentUser) return null;
 
@@ -54,13 +72,43 @@ export const Sidebar: React.FC<SidebarProps> = ({
     return custModules[moduleKey] !== false;
   };
 
+  const myCust = role === 'customer'
+    ? customers.find((c) => c.userId === currentUser.id || c.email === currentUser.email)
+    : null;
+
+  const unreadInboxCount = role === 'customer'
+    ? myCust
+      ? (customerMessages || []).filter(
+          (m) => m.customerId === myCust.id && !m.isRead && m.senderRole !== 'customer'
+        ).length
+      : 0
+    : (customerMessages || []).filter((m) => {
+        if (m.isRead || m.senderRole !== 'customer') return false;
+        if (role === 'super_admin') return true;
+        const c = customers.find((cust) => cust.id === m.customerId);
+        if (!c) return true;
+        if (activeBranchId && activeBranchId !== 'all') return c.branchId === activeBranchId;
+        const accessible = getUserAccessibleBranches ? getUserAccessibleBranches() : [];
+        const ids = accessible.map((b) => b.id);
+        return ids.length === 0 || ids.includes(c.branchId);
+      }).length;
+
+  const accessibleNotices = getAccessibleNotices ? getAccessibleNotices(currentUser) : notices || [];
+  const unreadNoticesCount = accessibleNotices.filter((n) => !n.readByUserIds?.includes(currentUser.id)).length;
+
   const pendingAdjustments = adjustmentRequests.filter((a) => a.status === 'pending').length;
   const pendingTickets = supportTickets.filter((t) => t.status === 'pending').length;
   const pendingKycs = kycRecords.filter((k) => k.status === 'pending').length;
 
+  const pendingJoinedPkgs = joinedPackages.filter((j) => j.status === 'pending').length;
+  const pendingSavingsReqs = savingsRequests.filter((s) => s.status === 'pending').length;
+  const pendingLoanApps = loans.filter((l) => l.status === 'pending').length;
+  const totalPkgNotifications = pendingJoinedPkgs + pendingSavingsReqs + pendingLoanApps;
+
   const handleMenuClick = (id: string, hasSubmenu = false) => {
     if (hasSubmenu) {
       setOpenSubmenu((prev) => (prev === id ? null : id));
+      setActiveMenu(id);
     } else {
       setActiveMenu(id);
       if (window.innerWidth < 1024) {
@@ -109,7 +157,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 {lang === 'bn' ? 'সমৃদ্ধি নেভিগেশন' : 'Samriddhi Navigation'}
               </p>
               <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                {lang === 'bn' ? '১৭টি সম্পূর্ণ মেনু সিস্টেম' : '17 Complete Menu Systems'}
+                {lang === 'bn' ? '১৮টি সম্পূর্ণ মেনু সিস্টেম' : '18 Complete Menu Systems'}
               </p>
             </div>
           </div>
@@ -137,6 +185,50 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <span>{lang === 'bn' ? '১. ড্যাশবোর্ড ওভারভিউ' : '1. Dashboard Overview'}</span>
             </div>
           </button>
+
+          {/* Inbox & Messages (Universal for All Roles) */}
+          {isVisible('inboxMessages') && (
+            <button
+              onClick={() => handleMenuClick('inbox')}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-bold text-xs transition-all ${
+                activeMenu === 'inbox'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
+                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <Inbox className="w-4 h-4 text-emerald-500" />
+                <span>{lang === 'bn' ? 'ইনবক্স ও বার্তা' : 'Inbox & Messages'}</span>
+              </div>
+              {unreadInboxCount > 0 && (
+                <span className="px-2 py-0.5 text-[10px] font-black rounded-full bg-rose-500 text-white animate-pulse">
+                  {unreadInboxCount}
+                </span>
+              )}
+            </button>
+          )}
+
+          {/* Official Notice Board (Universal / Role Controlled) */}
+          {isVisible('notices') && (
+            <button
+              onClick={() => handleMenuClick('notices')}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-bold text-xs transition-all ${
+                activeMenu === 'notices'
+                  ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20'
+                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <Megaphone className="w-4 h-4 text-amber-500" />
+                <span>{lang === 'bn' ? 'নোটিশ ও বিজ্ঞপ্তি বোর্ড' : 'Notice Board & Circulars'}</span>
+              </div>
+              {unreadNoticesCount > 0 && (
+                <span className="px-2 py-0.5 text-[10px] font-black rounded-full bg-amber-500 text-slate-950 animate-pulse font-mono">
+                  {unreadNoticesCount}
+                </span>
+              )}
+            </button>
+          )}
 
           {/* 2. Multi Institution Management (Super Admin) */}
           {role === 'super_admin' && (
@@ -325,24 +417,48 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <Layers className="w-4 h-4 text-emerald-600" />
                   <span>{lang === 'bn' ? '১০. প্যাকেজ ও স্কিম' : '10. Package & Schemes'}</span>
                 </div>
-                {openSubmenu === 'packages' ? (
-                  <ChevronDown className="w-4 h-4 shrink-0" />
-                ) : (
-                  <ChevronRight className="w-4 h-4 shrink-0" />
-                )}
+                <div className="flex items-center gap-1.5">
+                  {totalPkgNotifications > 0 && role !== 'customer' && (
+                    <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-white animate-pulse">
+                      {totalPkgNotifications}
+                    </span>
+                  )}
+                  {openSubmenu === 'packages' ? (
+                    <ChevronDown className="w-4 h-4 shrink-0" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4 shrink-0" />
+                  )}
+                </div>
               </button>
 
               {/* Package Submenus */}
               {openSubmenu === 'packages' && (
                 <div className="ml-4 mt-1 pl-2 border-l-2 border-emerald-200 dark:border-emerald-800 space-y-0.5 text-[11px]">
-                  {[
-                    { id: 'pkg_general', bn: 'সাধারণ সঞ্চয়', en: 'General Savings' },
-                    { id: 'pkg_coop', bn: 'সমবায় সমিতি প্যাকেজ', en: 'Cooperative Package' },
-                    { id: 'pkg_fdr', bn: 'এফডিআর প্যাকেজ', en: 'FDR Package' },
-                    { id: 'pkg_dps', bn: 'ডিপিএস প্যাকেজ', en: 'DPS Package' },
-                    { id: 'pkg_inv', bn: 'বিনিয়োগ প্যাকেজ', en: 'Investment Package' },
-                    { id: 'pkg_loan', bn: 'লোন প্যাকেজ', en: 'Loan Package' },
-                  ].map((sub) => (
+                  {(role === 'customer'
+                    ? [
+                        { id: 'pkg_general', bn: '১. সাধারণ সঞ্চয় (জমা ও উত্তোলন)', en: '1. General Savings (Deposit/Withdraw)' },
+                        { id: 'pkg_joined', bn: '২. আমার যুক্ত হওয়া স্কিমসমূহ', en: '2. My Enrolled Schemes' },
+                        { id: 'pkg_available', bn: '৩. উপলব্ধ সকল স্কিম প্যাকেজ', en: '3. Available Schemes' },
+                        { id: 'pkg_coop', bn: '৪. সমবায় সমিতি প্যাকেজ', en: '4. Cooperative Package' },
+                        { id: 'pkg_fdr', bn: '৫. এফডিআর প্যাকেজ', en: '5. FDR Package' },
+                        { id: 'pkg_dps', bn: '৬. ডিপিএস প্যাকেজ', en: '6. DPS Package' },
+                        { id: 'pkg_inv', bn: '৭. বিনিয়োগ প্যাকেজ', en: '7. Investment Package' },
+                        { id: 'pkg_loan', bn: '৮. লোন প্যাকেজ', en: '8. Loan Package' },
+                      ]
+                    : [
+                        { id: 'pkg_general', bn: '১. সাধারণ সঞ্চয় ব্যবস্থাপনা', en: '1. General Savings' },
+                        {
+                          id: 'pkg_requests',
+                          bn: `২. পেন্ডিং রিকোয়েস্টসমূহ ${totalPkgNotifications > 0 ? `(${totalPkgNotifications})` : ''}`,
+                          en: `2. Pending Requests ${totalPkgNotifications > 0 ? `(${totalPkgNotifications})` : ''}`,
+                        },
+                        { id: 'pkg_coop', bn: '৩. সমবায় সমিতি প্যাকেজ', en: '3. Cooperative Package' },
+                        { id: 'pkg_fdr', bn: '৪. এফডিআর প্যাকেজ', en: '4. FDR Package' },
+                        { id: 'pkg_dps', bn: '৫. ডিপিএস প্যাকেজ', en: '5. DPS Package' },
+                        { id: 'pkg_inv', bn: '৬. বিনিয়োগ প্যাকেজ', en: '6. Investment Package' },
+                        { id: 'pkg_loan', bn: '৭. লোন প্যাকেজ ও আবেদন', en: '7. Loan Package' },
+                      ]
+                  ).map((sub) => (
                     <button
                       key={sub.id}
                       onClick={() => {

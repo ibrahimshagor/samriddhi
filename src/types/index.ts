@@ -12,12 +12,17 @@ export interface User {
   role: UserRole;
   institutionId?: string;
   branchId?: string;
+  assignedBranchIds?: string[];
   avatar?: string;
   membershipId: string;
   joiningDate: string;
   status: 'active' | 'inactive' | 'suspended';
   designationBn?: string;
   designationEn?: string;
+  savedSignatureUrl?: string;
+  savedSignatoryName?: string;
+  savedSignatoryDesignation?: string;
+  savedSignatoryDepartment?: string;
 }
 
 export interface Institution {
@@ -57,6 +62,7 @@ export interface Customer {
   mobile: string;
   email: string;
   accountNo: string;
+  membershipId?: string;
   institutionId: string;
   branchId: string;
   generalSavingsBalance: number;
@@ -65,6 +71,12 @@ export interface Customer {
   kycStatus: 'pending' | 'approved' | 'rejected' | 'not_submitted';
   status: 'active' | 'inactive';
   joinedDate: string;
+  nidNumber?: string;
+  fatherOrSpouseName?: string;
+  motherName?: string;
+  presentAddress?: string;
+  permanentAddress?: string;
+  occupation?: string;
 }
 
 export interface PaymentChannel {
@@ -186,6 +198,9 @@ export interface SchemePackage {
 export interface JoinedCustomerPackage {
   id: string;
   customerId: string;
+  customerNameBn?: string;
+  customerNameEn?: string;
+  customerMobile?: string;
   packageId: string;
   branchId: string;
   sharesCount: number;
@@ -194,7 +209,35 @@ export interface JoinedCustomerPackage {
   maturityDate: string;
   nextDueDate: string;
   totalPaid: number;
-  status: 'active' | 'matured' | 'cancelled';
+  paymentMethod?: string;
+  trxId?: string;
+  notes?: string;
+  status: 'active' | 'matured' | 'cancelled' | 'pending';
+  appliedDate?: string;
+  approvedDate?: string;
+  approvedBy?: string;
+}
+
+export interface GeneralSavingsRequest {
+  id: string;
+  customerId: string;
+  customerNameBn: string;
+  customerNameEn: string;
+  customerMobile?: string;
+  branchId: string;
+  type: 'deposit' | 'withdrawal';
+  amount: number;
+  paymentChannelId?: string;
+  channelNameBn?: string;
+  accountNoUsed?: string;
+  transactionId?: string;
+  payoutMethod?: string;
+  payoutAccount?: string;
+  note?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  reviewedBy?: string;
+  createdAt: string;
+  reviewedAt?: string;
 }
 
 export interface CustomerLoanApplication {
@@ -246,11 +289,17 @@ export interface SupportTicket {
 export interface CustomerMessage {
   id: string;
   customerId: string;
+  senderId?: string;
   senderName: string;
-  senderRole: string;
+  senderRole: 'super_admin' | 'branch_manager' | 'staff' | 'customer' | string;
+  recipientRole?: string;
+  subject?: string;
   message: string;
   sentAt: string;
+  createdAt?: string;
   isRead?: boolean;
+  replyToId?: string;
+  branchId?: string;
 }
 
 export interface KycRecord {
@@ -321,6 +370,50 @@ export interface AuditLog {
   details: string;
 }
 
+export type NoticeScope = 'global' | 'institution' | 'branch';
+export type NoticePriority = 'normal' | 'important' | 'high' | 'urgent';
+
+export interface OfficialNotice {
+  id: string;
+  memoNo: string; // স্মারক নং (e.g. SFMS/CIR/2026/042)
+  titleBn: string;
+  titleEn: string;
+  categoryBn?: string; // যেমন: সাধারণ বিজ্ঞপ্তি, জরুরি নোটিশ, ছুটির নোটিশ, কিস্তি সংক্রান্ত, বার্ষিক সাধারণ সভা
+  categoryEn?: string;
+  category?: string;
+  contentBn: string;
+  contentEn: string;
+  scope: NoticeScope; // 'global' (সকল প্রতিষ্ঠান ও শাখা), 'institution' (প্রতিষ্ঠানের সকল শাখা), 'branch' (নির্দিষ্ট শাখা)
+  institutionId?: string;
+  branchId?: string;
+  targetBranchIds?: string[]; // নির্দিষ্ট শাখাসমূহ (যদি প্রতিষ্ঠান ভিত্তিক নির্দিষ্ট শাখা নির্বাচন করা হয়)
+  branchTargetMode?: 'all' | 'selected'; // 'all' = সকল শাখা, 'selected' = নির্বাচিত শাখা
+  showWatermark?: boolean; // ওয়াটারমার্ক প্রদর্শন করা হবে কি না
+  watermarkText?: string; // কাস্টম ওয়াটারমার্ক টেক্সট
+  signatureImageUrl?: string; // স্বাক্ষরকারীর স্ক্যান করা সাইন / ছবি (PNG/JPG)
+  targetAudience?: 'all' | 'customers' | 'staff' | 'members';
+  priority: NoticePriority;
+  publishedDate?: string;
+  publishDate?: string;
+  expiryDate?: string;
+  publishedBy: string;
+  publisherRole?: UserRole;
+  publisherDesignationBn?: string;
+  publisherDesignationEn?: string;
+  publisherBranchBn?: string;
+  publisherBranchEn?: string;
+  publisherPhone?: string;
+  publisherEmail?: string;
+  signatoryName?: string;
+  signatoryDesignation?: string;
+  signatoryDepartment?: string;
+  status: 'published' | 'draft' | 'archived';
+  attachmentUrl?: string;
+  viewCount?: number;
+  readByUserIds?: string[];
+  createdAt: string;
+}
+
 export interface CustomerVisibleModules {
   assetInvestments: boolean;
   institutionalBorrowings: boolean;
@@ -332,6 +425,8 @@ export interface CustomerVisibleModules {
   paymentChannels: boolean;
   institutions: boolean;
   branchManagement: boolean;
+  inboxMessages?: boolean;
+  notices?: boolean;
 }
 
 export interface SystemSettings {
