@@ -45,6 +45,8 @@ export const DashboardOverview: React.FC<{ onNavigate?: (page: string) => void }
     replyToCustomerMessage,
     activeBranchId,
     setActiveBranchId,
+    activeInstitutionId,
+    setActiveInstitutionId,
     getUserAccessibleBranches,
   } = useApp();
 
@@ -55,14 +57,24 @@ export const DashboardOverview: React.FC<{ onNavigate?: (page: string) => void }
 
   const role = currentUser.role;
   const isSuperAdmin = role === 'super_admin';
+  const isBranchManager = role === 'branch_manager';
   const accessibleBranches = getUserAccessibleBranches();
 
-  // Filter entities according to activeBranchId and user accessible branches
+  // Filter branches based on selected institution for Super Admin
+  const availableBranchesForSelector = isSuperAdmin
+    ? activeInstitutionId === 'all'
+      ? branches
+      : branches.filter((b) => b.institutionId === activeInstitutionId)
+    : accessibleBranches;
+
+  // Filter entities according to activeInstitutionId and activeBranchId
   const accessibleBranchIds = accessibleBranches.map((b) => b.id);
 
   const filteredCustomers = (customers || []).filter((c) => {
     if (isSuperAdmin) {
-      return activeBranchId === 'all' ? true : c.branchId === activeBranchId;
+      const matchInst = activeInstitutionId === 'all' ? true : c.institutionId === activeInstitutionId;
+      const matchBranch = activeBranchId === 'all' ? true : c.branchId === activeBranchId;
+      return matchInst && matchBranch;
     }
     if (activeBranchId === 'all') {
       return accessibleBranchIds.includes(c.branchId);
@@ -72,7 +84,9 @@ export const DashboardOverview: React.FC<{ onNavigate?: (page: string) => void }
 
   const filteredInvestments = (investments || []).filter((i) => {
     if (isSuperAdmin) {
-      return activeBranchId === 'all' ? true : i.branchId === activeBranchId;
+      const matchInst = activeInstitutionId === 'all' ? true : i.institutionId === activeInstitutionId;
+      const matchBranch = activeBranchId === 'all' ? true : i.branchId === activeBranchId;
+      return matchInst && matchBranch;
     }
     if (activeBranchId === 'all') {
       return accessibleBranchIds.includes(i.branchId);
@@ -82,7 +96,9 @@ export const DashboardOverview: React.FC<{ onNavigate?: (page: string) => void }
 
   const filteredLoans = (loans || []).filter((l) => {
     if (isSuperAdmin) {
-      return activeBranchId === 'all' ? true : l.branchId === activeBranchId;
+      const matchInst = activeInstitutionId === 'all' ? true : l.institutionId === activeInstitutionId;
+      const matchBranch = activeBranchId === 'all' ? true : l.branchId === activeBranchId;
+      return matchInst && matchBranch;
     }
     if (activeBranchId === 'all') {
       return accessibleBranchIds.includes(l.branchId);
@@ -162,6 +178,87 @@ export const DashboardOverview: React.FC<{ onNavigate?: (page: string) => void }
           </div>
         </div>
       </div>
+
+      {/* Dashboard Institution & Branch Scope Filter Toolbar */}
+      {role !== 'customer' && (
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
+            <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600">
+              <Building2 className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-xs font-black text-slate-900 dark:text-white">
+                {lang === 'bn' ? 'ডাটা ফিল্টারিং ও শাখা পর্যবেক্ষণ' : 'Scope & Branch Dashboard Filter'}
+              </p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                {isSuperAdmin
+                  ? lang === 'bn'
+                    ? 'প্রতিষ্ঠান ও শাখা ভিত্তিক পরিসংখ্যান দেখতে নির্বাচন করুন'
+                    : 'Select institution and branch to filter real-time metrics'
+                  : lang === 'bn'
+                  ? 'আপনার দায়িত্বপ্রাপ্ত শাখার ডাটা নির্বাচন করুন'
+                  : 'Filter metrics for your assigned branches'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Super Admin: Institution Selector */}
+            {isSuperAdmin && (
+              <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700">
+                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                  {lang === 'bn' ? 'প্রতিষ্ঠান:' : 'Inst:'}
+                </span>
+                <select
+                  value={activeInstitutionId}
+                  onChange={(e) => setActiveInstitutionId(e.target.value)}
+                  className="bg-transparent text-xs font-bold text-slate-900 dark:text-white outline-none cursor-pointer"
+                >
+                  <option value="all" className="dark:bg-slate-900">
+                    {lang === 'bn' ? '🌐 সকল প্রতিষ্ঠান (All Institutions)' : '🌐 All Institutions'}
+                  </option>
+                  {(institutions || []).map((inst) => (
+                    <option key={inst.id} value={inst.id} className="dark:bg-slate-900">
+                      🏢 {lang === 'bn' ? inst.nameBn : inst.nameEn}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Branch Selector */}
+            <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700">
+              <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                {lang === 'bn' ? 'শাখা:' : 'Branch:'}
+              </span>
+              <select
+                value={activeBranchId}
+                onChange={(e) => setActiveBranchId(e.target.value)}
+                className="bg-transparent text-xs font-bold text-slate-900 dark:text-white outline-none cursor-pointer"
+              >
+                <option value="all" className="dark:bg-slate-900">
+                  {isSuperAdmin
+                    ? activeInstitutionId === 'all'
+                      ? lang === 'bn'
+                        ? '🏛️ সকল শাখা (All Branches)'
+                        : '🏛️ All Branches'
+                      : lang === 'bn'
+                      ? '🏛️ প্রতিষ্ঠানের সকল শাখা (All Branches in Inst)'
+                      : '🏛️ All Branches in Inst'
+                    : lang === 'bn'
+                    ? '🏛️ সকল দায়িত্বপ্রাপ্ত শাখা (All Assigned Branches)'
+                    : '🏛️ All Assigned Branches'}
+                </option>
+                {availableBranchesForSelector.map((b) => (
+                  <option key={b.id} value={b.id} className="dark:bg-slate-900">
+                    📍 {lang === 'bn' ? b.nameBn : b.nameEn} ({b.code})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* KPI Stats Grid */}
       {role !== 'customer' ? (

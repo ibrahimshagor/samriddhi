@@ -188,30 +188,6 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
                 </p>
               </div>
             </div>
-
-            {/* Active Branch Selector for Staff / Manager / Super Admin */}
-            {currentUser && currentUser.role !== 'customer' && (isSuperAdmin || accessibleBranches.length > 0) && (
-              <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                <Building className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                <select
-                  value={activeBranchId || 'all'}
-                  onChange={(e) => setActiveBranchId && setActiveBranchId(e.target.value)}
-                  className="bg-transparent text-xs font-bold text-slate-800 dark:text-slate-200 outline-none cursor-pointer pr-1"
-                  title={lang === 'bn' ? 'কার্যকর শাখা পরিবর্তন করুন' : 'Change Active Branch'}
-                >
-                  {isSuperAdmin && (
-                    <option value="all" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
-                      {lang === 'bn' ? 'সকল শাখা (All Branches)' : 'All Branches'}
-                    </option>
-                  )}
-                  {accessibleBranches.map((b) => (
-                    <option key={b.id} value={b.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
-                      {lang === 'bn' ? b.nameBn : b.nameEn} ({b.code})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
           </div>
 
           {/* Right Section: Language, Theme, Demo Mode, ID Card & User */}

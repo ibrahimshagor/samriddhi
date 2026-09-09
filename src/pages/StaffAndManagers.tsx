@@ -19,6 +19,7 @@ export const StaffAndManagers: React.FC = () => {
   const [username, setUsername] = useState('');
   const [role, setRole] = useState<UserRole>('branch_staff');
   const [branchId, setBranchId] = useState('');
+  const [assignedBranchIds, setAssignedBranchIds] = useState<string[]>([]);
   const [designationBn, setDesignationBn] = useState('');
   const [designationEn, setDesignationEn] = useState('');
 
@@ -34,7 +35,11 @@ export const StaffAndManagers: React.FC = () => {
   // Scope filter: Managers & Staff see their branch staff/managers unless Super Admin
   const scopedList = isSuperAdmin
     ? staffAndManagerList
-    : staffAndManagerList.filter((u) => u.branchId === currentUser.branchId);
+    : staffAndManagerList.filter((u) => {
+        const uBranches = u.assignedBranchIds || (u.branchId ? [u.branchId] : []);
+        const myBranches = currentUser.assignedBranchIds || (currentUser.branchId ? [currentUser.branchId] : []);
+        return uBranches.some((b) => myBranches.includes(b)) || u.branchId === currentUser.branchId;
+      });
 
   const filteredList = scopedList.filter((u) => {
     const query = (searchQuery || '').toLowerCase();
@@ -55,7 +60,9 @@ export const StaffAndManagers: React.FC = () => {
     setMobile('');
     setUsername('stf' + Math.floor(100 + Math.random() * 900));
     setRole('branch_staff');
-    setBranchId(currentUser.branchId || (branches || [])[0]?.id || '');
+    const defaultBranch = currentUser.branchId || (branches || [])[0]?.id || '';
+    setBranchId(defaultBranch);
+    setAssignedBranchIds([defaultBranch]);
     setDesignationBn('শাখা ফিল্ড অফিসার');
     setDesignationEn('Field Officer');
     setShowModal(true);
@@ -70,13 +77,31 @@ export const StaffAndManagers: React.FC = () => {
     setUsername(u.username);
     setRole(u.role);
     setBranchId(u.branchId || '');
+    const currentAssigned = u.assignedBranchIds && u.assignedBranchIds.length > 0
+      ? u.assignedBranchIds
+      : (u.branchId ? [u.branchId] : []);
+    setAssignedBranchIds(currentAssigned);
     setDesignationBn(u.designationBn || '');
     setDesignationEn(u.designationEn || '');
     setShowModal(true);
   };
 
+  const toggleAssignedBranch = (bId: string) => {
+    setAssignedBranchIds((prev) => {
+      if (prev.includes(bId)) {
+        // Prevent removing the primary branch
+        if (bId === branchId && prev.length === 1) return prev;
+        return prev.filter((id) => id !== bId);
+      } else {
+        return [...prev, bId];
+      }
+    });
+  };
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+    const finalAssignedBranches = Array.from(new Set([branchId, ...assignedBranchIds])).filter(Boolean);
+
     if (editingUser) {
       updateUser({
         ...editingUser,
@@ -87,6 +112,7 @@ export const StaffAndManagers: React.FC = () => {
         username,
         role,
         branchId,
+        assignedBranchIds: finalAssignedBranches,
         designationBn,
         designationEn,
       });
@@ -99,6 +125,7 @@ export const StaffAndManagers: React.FC = () => {
         mobile,
         role,
         branchId,
+        assignedBranchIds: finalAssignedBranches,
         membershipId: 'SMF-STF-' + Math.floor(1000 + Math.random() * 9000),
         joiningDate: new Date().toISOString().split('T')[0],
         status: 'active',
@@ -205,10 +232,33 @@ export const StaffAndManagers: React.FC = () => {
                     <Mail className="w-3.5 h-3.5 text-slate-400" />
                     <span>{user.email || 'N/A'}</span>
                   </p>
-                  <p className="flex items-center gap-2">
-                    <Building2 className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>{branchObj ? (lang === 'bn' ? branchObj.nameBn : branchObj.nameEn) : 'প্রধান কার্যালয়'}</span>
-                  </p>
+                  <div className="flex items-start gap-2">
+                    <Building2 className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
+                    <div>
+                      <span className="font-semibold text-slate-800 dark:text-slate-200">
+                        {branchObj ? (lang === 'bn' ? branchObj.nameBn : branchObj.nameEn) : 'প্রধান কার্যালয়'}
+                      </span>
+                      {user.assignedBranchIds && user.assignedBranchIds.length > 1 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          <span className="text-[10px] text-slate-400 font-bold">
+                            {lang === 'bn' ? 'দায়িত্বপ্রাপ্ত শাখা:' : 'Assigned:'}
+                          </span>
+                          {user.assignedBranchIds.map((bId) => {
+                            const b = (branches || []).find((br) => br.id === bId);
+                            if (!b) return null;
+                            return (
+                              <span
+                                key={bId}
+                                className="px-1.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold border border-emerald-200 dark:border-emerald-800"
+                              >
+                                {lang === 'bn' ? b.nameBn : b.nameEn}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                   <p className="flex items-center gap-2 font-mono text-[11px] text-slate-500">
                     <span>ID: {user.membershipId}</span> | <span>User: {user.username}</span>
                   </p>
@@ -219,13 +269,13 @@ export const StaffAndManagers: React.FC = () => {
                 <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
                   <button
                     onClick={() => handleOpenEdit(user)}
-                    className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-emerald-100 text-slate-700 dark:text-slate-300"
+                    className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-emerald-100 text-slate-700 dark:text-slate-300 cursor-pointer"
                   >
                     <Edit2 className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => deleteUser(user.id)}
-                    className="p-1.5 rounded-lg bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 text-rose-600"
+                    className="p-1.5 rounded-lg bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 text-rose-600 cursor-pointer"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -321,20 +371,61 @@ export const StaffAndManagers: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  {lang === 'bn' ? 'শাখা নির্বাচন করুন' : 'Select Branch'}
+                  {lang === 'bn' ? 'মূল কর্মস্থল শাখা (Primary Branch)' : 'Primary Branch'}
                 </label>
                 <select
                   value={branchId}
-                  onChange={(e) => setBranchId(e.target.value)}
+                  onChange={(e) => {
+                    const newBId = e.target.value;
+                    setBranchId(newBId);
+                    if (!assignedBranchIds.includes(newBId)) {
+                      setAssignedBranchIds((prev) => [...prev, newBId]);
+                    }
+                  }}
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs outline-none"
                   required
                 >
                   {branches.map((b) => (
                     <option key={b.id} value={b.id}>
-                      {lang === 'bn' ? b.nameBn : b.nameEn}
+                      {lang === 'bn' ? b.nameBn : b.nameEn} ({b.code})
                     </option>
                   ))}
                 </select>
+              </div>
+
+              {/* Multi-Branch Assignment */}
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                  {lang === 'bn' ? '🏢 দায়িত্বপ্রাপ্ত সকল শাখাসমূহ (Multi-Branch Assignment)' : 'Assigned Branches'}
+                </label>
+                <p className="text-[11px] text-slate-500">
+                  {lang === 'bn'
+                    ? 'ম্যানেজারকে একাধিক শাখার দায়িত্ব দিতে টিক দিন:'
+                    : 'Check branches this manager is authorized to supervise:'}
+                </p>
+                <div className="grid grid-cols-2 gap-1.5 max-h-32 overflow-y-auto p-1">
+                  {branches.map((b) => {
+                    const isChecked = assignedBranchIds.includes(b.id) || b.id === branchId;
+                    return (
+                      <label
+                        key={b.id}
+                        className={`flex items-center gap-2 p-1.5 rounded-lg border text-xs cursor-pointer ${
+                          isChecked
+                            ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-400 text-emerald-900 dark:text-emerald-200 font-bold'
+                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => toggleAssignedBranch(b.id)}
+                          className="rounded text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5"
+                        />
+                        <span className="truncate">{b.nameBn}</span>
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
 
               <div>

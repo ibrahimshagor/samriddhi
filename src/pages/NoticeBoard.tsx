@@ -42,6 +42,7 @@ export const NoticeBoard: React.FC = () => {
     branches,
     notices,
     getAccessibleNotices,
+    saveUserSignatureProfile,
     addNotice,
     updateNotice,
     deleteNotice,
@@ -57,10 +58,17 @@ export const NoticeBoard: React.FC = () => {
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedScope, setSelectedScope] = useState<string>('all');
+  const [selectedAudience, setSelectedAudience] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedPriority, setSelectedPriority] = useState<string>('all');
   const [selectedBranchId, setSelectedBranchId] = useState<string>('all');
   const [viewOnlyUnread, setViewOnlyUnread] = useState<boolean>(false);
+
+  // Search state inside Create/Edit Modal for branch selection
+  const [modalBranchSearch, setModalBranchSearch] = useState<string>('');
+
+  // Signature persistent save setting
+  const [saveSignatureToProfile, setSaveSignatureToProfile] = useState<boolean>(true);
 
   // Form State for Create / Edit
   const [formData, setFormData] = useState<{
@@ -73,6 +81,7 @@ export const NoticeBoard: React.FC = () => {
     branchId: string;
     targetBranchIds: string[];
     branchTargetMode: 'all' | 'selected';
+    targetAudience: 'all' | 'staff' | 'customers';
     category: string;
     priority: NoticePriority;
     publishDate: string;
@@ -95,17 +104,18 @@ export const NoticeBoard: React.FC = () => {
     branchId: currentUser?.branchId || 'br-1',
     targetBranchIds: [],
     branchTargetMode: 'all',
+    targetAudience: 'all',
     category: 'সার্কুলার',
     priority: 'normal',
     publishDate: new Date().toISOString().split('T')[0],
     expiryDate: '',
     memoNo: '',
-    signatoryName: currentUser?.nameBn || currentUser?.nameEn || '',
-    signatoryDesignation: currentUser?.role === 'super_admin' ? 'প্রধান নির্বাহী কর্মকর্তা (CEO)' : 'শাখা ব্যবস্থাপক',
-    signatoryDepartment: 'কার্যনির্বাহী প্রশাসন ও মনিটরিং সেল',
+    signatoryName: currentUser?.savedSignatoryName || currentUser?.nameBn || currentUser?.nameEn || '',
+    signatoryDesignation: currentUser?.savedSignatoryDesignation || (currentUser?.role === 'super_admin' ? 'প্রধান নির্বাহী কর্মকর্তা (CEO)' : 'শাখা ব্যবস্থাপক'),
+    signatoryDepartment: currentUser?.savedSignatoryDepartment || (currentUser?.role === 'super_admin' ? 'প্রধান কার্যালয় প্রশাসন ও পরিচালনা পর্ষদ' : 'শাখা ব্যবস্থাপনা ও ঋণ বিভাগ'),
     showWatermark: true,
     watermarkText: 'OFFICIAL NOTICE',
-    signatureImageUrl: '',
+    signatureImageUrl: currentUser?.savedSignatureUrl || '',
     status: 'published',
   });
 
@@ -124,6 +134,20 @@ export const NoticeBoard: React.FC = () => {
     return branches.filter((b) => b.institutionId === formData.institutionId);
   }, [branches, formData.institutionId]);
 
+  // Filtered branches for search inside modal
+  const filteredBranchesForInstModal = useMemo(() => {
+    if (!modalBranchSearch.trim()) return branchesForSelectedInst;
+    const q = modalBranchSearch.toLowerCase().trim();
+    return branchesForSelectedInst.filter(
+      (b) =>
+        b.nameBn?.toLowerCase().includes(q) ||
+        b.nameEn?.toLowerCase().includes(q) ||
+        b.code?.toLowerCase().includes(q) ||
+        b.addressBn?.toLowerCase().includes(q) ||
+        b.addressEn?.toLowerCase().includes(q)
+    );
+  }, [branchesForSelectedInst, modalBranchSearch]);
+
   // Get Accessible notices for current user
   const accessibleNotices = useMemo(() => {
     return getAccessibleNotices ? getAccessibleNotices(currentUser) : notices;
@@ -134,6 +158,9 @@ export const NoticeBoard: React.FC = () => {
     return accessibleNotices.filter((n) => {
       // Scope Filter
       if (selectedScope !== 'all' && n.scope !== selectedScope) return false;
+
+      // Target Audience Filter
+      if (selectedAudience !== 'all' && n.targetAudience && n.targetAudience !== selectedAudience) return false;
 
       // Category Filter
       if (selectedCategory !== 'all' && n.category !== selectedCategory) return false;
@@ -170,6 +197,7 @@ export const NoticeBoard: React.FC = () => {
   }, [
     accessibleNotices,
     selectedScope,
+    selectedAudience,
     selectedCategory,
     selectedPriority,
     selectedBranchId,
@@ -200,17 +228,18 @@ export const NoticeBoard: React.FC = () => {
       branchId: availableBranchesForUser[0]?.id || 'br-1',
       targetBranchIds: [],
       branchTargetMode: 'all',
+      targetAudience: 'all',
       category: 'সার্কুলার',
       priority: 'normal',
       publishDate: new Date().toISOString().split('T')[0],
       expiryDate: '',
       memoNo: '',
-      signatoryName: currentUser?.nameBn || currentUser?.nameEn || '',
-      signatoryDesignation: isSuperAdmin ? 'প্রধান নির্বাহী কর্মকর্তা (CEO)' : 'শাখা ব্যবস্থাপক',
-      signatoryDepartment: isSuperAdmin ? 'প্রধান কার্যালয় প্রশাসন ও পরিচালনা পর্ষদ' : 'শাখা ব্যবস্থাপনা ও ঋণ বিভাগ',
+      signatoryName: currentUser?.savedSignatoryName || currentUser?.nameBn || currentUser?.nameEn || '',
+      signatoryDesignation: currentUser?.savedSignatoryDesignation || (isSuperAdmin ? 'প্রধান নির্বাহী কর্মকর্তা (CEO)' : 'শাখা ব্যবস্থাপক'),
+      signatoryDepartment: currentUser?.savedSignatoryDepartment || (isSuperAdmin ? 'প্রধান কার্যালয় প্রশাসন ও পরিচালনা পর্ষদ' : 'শাখা ব্যবস্থাপনা ও ঋণ বিভাগ'),
       showWatermark: true,
       watermarkText: 'OFFICIAL NOTICE',
-      signatureImageUrl: '',
+      signatureImageUrl: currentUser?.savedSignatureUrl || '',
       status: 'published',
     });
     setShowCreateModal(true);
@@ -228,9 +257,10 @@ export const NoticeBoard: React.FC = () => {
       branchId: notice.branchId || 'br-1',
       targetBranchIds: notice.targetBranchIds || [],
       branchTargetMode: notice.branchTargetMode || 'all',
-      category: notice.category,
+      targetAudience: (notice.targetAudience as any) || 'all',
+      category: notice.category || 'সার্কুলার',
       priority: notice.priority,
-      publishDate: notice.publishDate,
+      publishDate: notice.publishDate || notice.publishedDate || new Date().toISOString().split('T')[0],
       expiryDate: notice.expiryDate || '',
       memoNo: notice.memoNo,
       signatoryName: notice.signatoryName || notice.publishedBy,
@@ -258,11 +288,29 @@ export const NoticeBoard: React.FC = () => {
     const reader = new FileReader();
     reader.onload = () => {
       if (reader.result) {
-        setFormData((prev) => ({ ...prev, signatureImageUrl: reader.result as string }));
-        showToast(lang === 'bn' ? 'স্বাক্ষর সফলভাবে আপলোড হয়েছে!' : 'Signature image uploaded!', 'success');
+        const sigUrl = reader.result as string;
+        setFormData((prev) => ({ ...prev, signatureImageUrl: sigUrl }));
+        showToast(lang === 'bn' ? 'স্বাক্ষর সফলভাবে আপলোড হয়েছে! এটি ভবিষ্যতে ব্যবহারের জন্য প্রোফাইলে সংরক্ষিত থাকবে।' : 'Signature image uploaded and saved to profile!', 'success');
       }
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleSaveSignatureProfilePermanently = () => {
+    if (saveUserSignatureProfile) {
+      saveUserSignatureProfile({
+        savedSignatureUrl: formData.signatureImageUrl,
+        savedSignatoryName: formData.signatoryName,
+        savedSignatoryDesignation: formData.signatoryDesignation,
+        savedSignatoryDepartment: formData.signatoryDepartment,
+      });
+      showToast(
+        lang === 'bn'
+          ? 'স্বাক্ষর ও পদবি সফলভাবে আপনার ইউজার প্রোফাইলে স্থায়ীভাবে সংরক্ষণ করা হয়েছে!'
+          : 'Signature & Signatory details saved permanently to your profile!',
+        'success'
+      );
+    }
   };
 
   const handleFormSubmit = (e: React.FormEvent) => {
@@ -277,15 +325,27 @@ export const NoticeBoard: React.FC = () => {
       return;
     }
 
+    // Auto-save signature and signatory profile if requested
+    if (saveSignatureToProfile && saveUserSignatureProfile) {
+      saveUserSignatureProfile({
+        savedSignatureUrl: formData.signatureImageUrl,
+        savedSignatoryName: formData.signatoryName,
+        savedSignatoryDesignation: formData.signatoryDesignation,
+        savedSignatoryDepartment: formData.signatoryDepartment,
+      });
+    }
+
     if (editingNotice) {
       updateNotice({
         ...editingNotice,
         ...formData,
+        targetAudience: formData.targetAudience,
         publishedBy: currentUser?.nameBn || currentUser?.nameEn || 'অফিস',
       });
     } else {
       addNotice({
         ...formData,
+        targetAudience: formData.targetAudience,
         publishedBy: currentUser?.nameBn || currentUser?.nameEn || 'অফিস',
         scope: formData.scope,
         institutionId: formData.scope === 'global' ? undefined : formData.institutionId,
@@ -484,7 +544,7 @@ export const NoticeBoard: React.FC = () => {
           </div>
 
           {/* Scope Dropdown Filter */}
-          <div className="flex items-center gap-2 w-full md:w-auto">
+          <div className="flex items-center gap-2 w-full md:w-auto flex-wrap sm:flex-nowrap">
             <select
               value={selectedScope}
               onChange={(e) => setSelectedScope(e.target.value)}
@@ -494,6 +554,17 @@ export const NoticeBoard: React.FC = () => {
               <option value="global">{lang === 'bn' ? '👑 সুপার এডমিন গ্লোবাল নোটিশ' : '👑 Super Admin Global'}</option>
               <option value="institution">{lang === 'bn' ? '🏛️ প্রতিষ্ঠান ভিত্তিক নোটিশ' : '🏛️ Institution Notice'}</option>
               <option value="branch">{lang === 'bn' ? '🏢 শাখা ভিত্তিক নোটিশ' : '🏢 Branch Specific'}</option>
+            </select>
+
+            {/* Target Audience Filter */}
+            <select
+              value={selectedAudience}
+              onChange={(e) => setSelectedAudience(e.target.value)}
+              className="px-3.5 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
+            >
+              <option value="all">{lang === 'bn' ? '👥 সকল গ্রাহক ও স্টাফ' : '👥 All Audiences'}</option>
+              <option value="staff">{lang === 'bn' ? '🔒 শুধুমাত্র স্টাফ' : '🔒 Staff Only'}</option>
+              <option value="customers">{lang === 'bn' ? '👤 শুধুমাত্র গ্রাহক' : '👤 Customers Only'}</option>
             </select>
 
             {/* Category Filter */}
@@ -609,7 +680,7 @@ export const NoticeBoard: React.FC = () => {
                     <div className="flex items-center gap-1.5 flex-wrap">
                       {/* Scope Badge */}
                       <span
-                        className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full ${
+                        className={`inline-flex items-center justify-center text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full text-center leading-normal ${
                           notice.scope === 'global'
                             ? 'bg-purple-100 text-purple-900 dark:bg-purple-950 dark:text-purple-300 border border-purple-200 dark:border-purple-800'
                             : notice.scope === 'institution'
@@ -618,28 +689,39 @@ export const NoticeBoard: React.FC = () => {
                         }`}
                       >
                         {notice.scope === 'global'
-                          ? (lang === 'bn' ? '👑 গ্লোবাল নোটিশ' : '👑 Global')
+                          ? (lang === 'bn' ? '👑 গ্লোবাল' : '👑 Global')
                           : notice.scope === 'institution'
                           ? notice.branchTargetMode === 'selected' && notice.targetBranchIds?.length
-                            ? (lang === 'bn' ? `🏛️ ${targetInst?.nameBn || 'প্রতিষ্ঠান'} (${notice.targetBranchIds.length}টি শাখা)` : `🏛️ ${targetInst?.nameEn || 'Inst'} (${notice.targetBranchIds.length} Branches)`)
-                            : (lang === 'bn' ? `🏛️ ${targetInst?.nameBn || 'প্রতিষ্ঠান'} (সকল শাখা)` : '🏛️ Institution (All Branches)')
+                            ? (lang === 'bn' ? `🏛️ ${targetInst?.nameBn || 'প্রতিষ্ঠান'} (${notice.targetBranchIds.length} শাখা)` : `🏛️ ${targetInst?.nameEn || 'Inst'} (${notice.targetBranchIds.length} Branches)`)
+                            : (lang === 'bn' ? `🏛️ ${targetInst?.nameBn || 'প্রতিষ্ঠান'}` : '🏛️ Institution')
                           : (lang === 'bn' ? `🏢 শাখা: ${targetBranch?.nameBn || 'নির্দিষ্ট শাখা'}` : `🏢 Branch: ${targetBranch?.nameEn || 'Branch'}`)}
                       </span>
 
+                      {/* Audience Badge */}
+                      {notice.targetAudience && notice.targetAudience !== 'all' && (
+                        <span className={`inline-flex items-center justify-center text-[10px] font-bold px-2 py-0.5 rounded-full text-center leading-normal ${
+                          notice.targetAudience === 'staff'
+                            ? 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-800'
+                            : 'bg-sky-100 text-sky-900 dark:bg-sky-950 dark:text-sky-300 border border-sky-300 dark:border-sky-800'
+                        }`}>
+                          {notice.targetAudience === 'staff' ? '🔒 স্টাফ' : '👥 গ্রাহক'}
+                        </span>
+                      )}
+
                       {/* Priority Badge */}
                       {notice.priority === 'urgent' && (
-                        <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-rose-600 text-white animate-pulse">
+                        <span className="inline-flex items-center justify-center text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-rose-600 text-white animate-pulse text-center leading-normal">
                           {lang === 'bn' ? '🚨 জরুরি' : '🚨 Urgent'}
                         </span>
                       )}
                       {notice.priority === 'high' && (
-                        <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-amber-500 text-slate-950">
+                        <span className="inline-flex items-center justify-center text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 text-center leading-normal">
                           {lang === 'bn' ? 'উচ্চ অগ্রাধিকার' : 'High Priority'}
                         </span>
                       )}
 
                       {/* Category Tag */}
-                      <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
+                      <span className="inline-flex items-center justify-center text-[10px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md text-center leading-normal">
                         {notice.category}
                       </span>
                     </div>
@@ -921,12 +1003,15 @@ export const NoticeBoard: React.FC = () => {
                         </label>
                       </div>
 
-                      {/* If Selected mode: show multi-select list of branches for this institution */}
+                      {/* If Selected mode: show compact searchable multi-select picker */}
                       {formData.branchTargetMode === 'selected' && (
-                        <div className="pt-2 border-t border-slate-200 dark:border-slate-800 space-y-2 animate-fadeIn">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                              {lang === 'bn' ? `শাখা নির্বাচন করুন (${formData.targetBranchIds.length}/${branchesForSelectedInst.length}টি নির্বাচিত)` : `Select Branches (${formData.targetBranchIds.length}/${branchesForSelectedInst.length} selected)`}
+                        <div className="pt-2 border-t border-slate-200 dark:border-slate-800 space-y-2.5 animate-fadeIn">
+                          {/* Controls header */}
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <span className="text-[11px] font-bold text-blue-900 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded-md border border-blue-200 dark:border-blue-800">
+                              {lang === 'bn'
+                                ? `🎯 ${formData.targetBranchIds.length}/${branchesForSelectedInst.length}টি শাখা নির্বাচিত`
+                                : `🎯 ${formData.targetBranchIds.length}/${branchesForSelectedInst.length} Branches Selected`}
                             </span>
                             <div className="flex items-center gap-2">
                               <button
@@ -936,7 +1021,7 @@ export const NoticeBoard: React.FC = () => {
                               >
                                 {lang === 'bn' ? 'সব নির্বাচন' : 'Select All'}
                               </button>
-                              <span className="text-slate-300">|</span>
+                              <span className="text-slate-300 dark:text-slate-700">|</span>
                               <button
                                 type="button"
                                 onClick={deselectAllBranchesForInst}
@@ -947,20 +1032,68 @@ export const NoticeBoard: React.FC = () => {
                             </div>
                           </div>
 
-                          {branchesForSelectedInst.length === 0 ? (
-                            <p className="text-xs text-slate-400 italic py-2">
-                              {lang === 'bn' ? 'এই প্রতিষ্ঠানের কোনো শাখা পাওয়া যায়নি।' : 'No branches found for this institution.'}
+                          {/* Search box within branch picker */}
+                          <div className="relative">
+                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                            <input
+                              type="text"
+                              value={modalBranchSearch}
+                              onChange={(e) => setModalBranchSearch(e.target.value)}
+                              placeholder={lang === 'bn' ? 'ব্রাঞ্চের নাম বা কোড লিখে দ্রুত খুঁজুন...' : 'Search branch name or code...'}
+                              className="w-full pl-8 pr-7 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-blue-500"
+                            />
+                            {modalBranchSearch && (
+                              <button
+                                type="button"
+                                onClick={() => setModalBranchSearch('')}
+                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 cursor-pointer"
+                              >
+                                ✕
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Selected branch tags preview */}
+                          {formData.targetBranchIds.length > 0 && (
+                            <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto p-1 bg-slate-50 dark:bg-slate-800/40 rounded-lg border border-slate-200 dark:border-slate-700/60 custom-scrollbar">
+                              {formData.targetBranchIds.map((bId) => {
+                                const b = branchesForSelectedInst.find((item) => item.id === bId);
+                                if (!b) return null;
+                                return (
+                                  <span
+                                    key={bId}
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-950 text-blue-900 dark:text-blue-200 text-[10px] font-bold border border-blue-200 dark:border-blue-800"
+                                  >
+                                    <span>{b.nameBn}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleBranchSelection(bId)}
+                                      className="text-blue-500 hover:text-rose-600 cursor-pointer ml-0.5"
+                                      title={lang === 'bn' ? 'বাদ দিন' : 'Remove'}
+                                    >
+                                      ✕
+                                    </button>
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          )}
+
+                          {/* Scrollable Compact Branch List */}
+                          {filteredBranchesForInstModal.length === 0 ? (
+                            <p className="text-xs text-slate-400 italic py-2 text-center">
+                              {lang === 'bn' ? 'কোনো শাখা পাওয়া যায়নি।' : 'No branches found matching search.'}
                             </p>
                           ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-40 overflow-y-auto p-1 custom-scrollbar">
-                              {branchesForSelectedInst.map((b) => {
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-32 overflow-y-auto p-1 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 custom-scrollbar">
+                              {filteredBranchesForInstModal.map((b) => {
                                 const isChecked = formData.targetBranchIds.includes(b.id);
                                 return (
                                   <label
                                     key={b.id}
-                                    className={`flex items-center gap-2 p-2 rounded-lg border text-xs cursor-pointer transition-all ${
+                                    className={`flex items-center gap-2 p-1.5 rounded-md border text-xs cursor-pointer transition-all ${
                                       isChecked
-                                        ? 'bg-blue-50/80 dark:bg-blue-950/40 text-blue-900 dark:text-blue-200 border-blue-300 dark:border-blue-800 font-bold'
+                                        ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-900 dark:text-blue-200 border-blue-300 dark:border-blue-800 font-bold'
                                         : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 font-medium'
                                     }`}
                                   >
@@ -1002,6 +1135,86 @@ export const NoticeBoard: React.FC = () => {
                     </select>
                   </div>
                 )}
+              </div>
+
+              {/* 2. Target Audience Selector (কার জন্য নোটিশ?) */}
+              <div className="p-4 rounded-2xl bg-sky-50/60 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-800/60 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-black text-sky-900 dark:text-sky-200">
+                    {lang === 'bn' ? '২. লক্ষ্যভিত্তিক পাঠক / প্রাপক (Target Audience):' : '2. Target Audience:'}
+                  </label>
+                  <span className="text-[10px] text-sky-700 dark:text-sky-300 font-semibold">
+                    {lang === 'bn' ? 'কারা এই নোটিশটি দেখতে পাবেন?' : 'Who should see this notice?'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                  {/* All */}
+                  <label
+                    className={`flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer transition-all ${
+                      formData.targetAudience === 'all'
+                        ? 'bg-sky-600 text-white border-sky-600 font-bold shadow-md'
+                        : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-700'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="targetAudience"
+                      value="all"
+                      checked={formData.targetAudience === 'all'}
+                      onChange={() => setFormData({ ...formData, targetAudience: 'all' })}
+                      className="mt-0.5"
+                    />
+                    <div>
+                      <p className="font-bold">👥 সার্বজনীন (সকলের জন্য)</p>
+                      <p className="text-[10px] opacity-85">গ্রাহক, সদস্য, কর্মকর্তা ও স্টাফবৃন্দ</p>
+                    </div>
+                  </label>
+
+                  {/* Staff Only */}
+                  <label
+                    className={`flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer transition-all ${
+                      formData.targetAudience === 'staff'
+                        ? 'bg-amber-600 text-white border-amber-600 font-bold shadow-md'
+                        : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-700'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="targetAudience"
+                      value="staff"
+                      checked={formData.targetAudience === 'staff'}
+                      onChange={() => setFormData({ ...formData, targetAudience: 'staff' })}
+                      className="mt-0.5"
+                    />
+                    <div>
+                      <p className="font-bold">🔒 শুধুমাত্র স্টাফ ও কর্মকর্তা</p>
+                      <p className="text-[10px] opacity-85">অভ্যন্তরীণ সার্কুলার ও অফিসিয়াল পলিসি</p>
+                    </div>
+                  </label>
+
+                  {/* Customers Only */}
+                  <label
+                    className={`flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer transition-all ${
+                      formData.targetAudience === 'customers'
+                        ? 'bg-emerald-600 text-white border-emerald-600 font-bold shadow-md'
+                        : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-700'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="targetAudience"
+                      value="customers"
+                      checked={formData.targetAudience === 'customers'}
+                      onChange={() => setFormData({ ...formData, targetAudience: 'customers' })}
+                      className="mt-0.5"
+                    />
+                    <div>
+                      <p className="font-bold">👤 সম্মানিত গ্রাহক ও সদস্য</p>
+                      <p className="text-[10px] opacity-85">গ্রাহকবান্ধব সাধারণ ঘোষণা ও বিজ্ঞপ্তি</p>
+                    </div>
+                  </label>
+                </div>
               </div>
 
               {/* Title & Memo */}
@@ -1178,9 +1391,21 @@ export const NoticeBoard: React.FC = () => {
 
               {/* Signatory Details & Signature Upload (নিবেদক) */}
               <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-4">
-                <p className="text-xs font-black text-slate-800 dark:text-slate-200">
-                  স্বাক্ষরকারী ও নিবেদক তথ্য (Signatory Details & Signature):
-                </p>
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <p className="text-xs font-black text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <span>✍️</span>
+                    <span>{lang === 'bn' ? 'স্বাক্ষরকারী ও নিবেদক তথ্য (Signatory Profile):' : 'Signatory Details & Signature:'}</span>
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={handleSaveSignatureProfilePermanently}
+                    className="px-2.5 py-1 rounded-lg bg-amber-100 dark:bg-amber-950/60 hover:bg-amber-200 dark:hover:bg-amber-900/60 text-amber-900 dark:text-amber-200 text-[11px] font-extrabold border border-amber-300 dark:border-amber-700 transition-colors inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>💾</span>
+                    <span>{lang === 'bn' ? 'প্রোফাইলে স্থায়ীভাবে সেভ করুন' : 'Save to My Profile'}</span>
+                  </button>
+                </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>

@@ -81,6 +81,8 @@ interface AppContextType {
   isFirebaseSyncing: boolean;
   activeBranchId: string;
   setActiveBranchId: (branchId: string) => void;
+  activeInstitutionId: string;
+  setActiveInstitutionId: (institutionId: string) => void;
   getUserAccessibleBranches: (user?: User | null) => Branch[];
   getAccessibleNotices: (user?: User | null) => OfficialNotice[];
   saveUserSignatureProfile: (profile: {
@@ -183,57 +185,88 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+// Safe JSON parser to avoid any blank-screen crash if localStorage data is corrupted
+function safeLoadJson<T>(key: string, fallback: T): T {
+  try {
+    const saved = localStorage.getItem(key);
+    if (!saved || saved === 'undefined' || saved === 'null') return fallback;
+    const parsed = JSON.parse(saved);
+    return parsed ?? fallback;
+  } catch (err) {
+    console.warn(`[SafeStorage] Corrupted or invalid JSON for key "${key}", using fallback:`, err);
+    return fallback;
+  }
+}
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem('smf_user');
-    return saved ? JSON.parse(saved) : initialUsers[0]; // Default logged in as Super Admin for direct smooth start
+    return safeLoadJson<User | null>('smf_user', initialUsers[0]);
   });
 
   const [lang, setLang] = useState<Language>(() => {
-    return (localStorage.getItem('smf_lang') as Language) || 'bn';
+    try {
+      return (localStorage.getItem('smf_lang') as Language) || 'bn';
+    } catch {
+      return 'bn';
+    }
   });
 
   const [darkMode, setDarkMode] = useState<boolean>(() => {
-    return localStorage.getItem('smf_dark') === 'true';
+    try {
+      return localStorage.getItem('smf_dark') === 'true';
+    } catch {
+      return false;
+    }
   });
 
   const [settings, setSettings] = useState<SystemSettings>(() => {
-    const saved = localStorage.getItem('smf_settings');
-    if (saved) {
-      try {
+    try {
+      const saved = localStorage.getItem('smf_settings');
+      if (saved) {
         const parsed = JSON.parse(saved);
         return {
           ...initialSettings,
           ...parsed,
-          logoSvg: parsed.logoSvg || initialSettings.logoSvg || '/favicon.svg',
+          logoSvg: parsed.logoSvg || initialSettings.logoSvg || './favicon.svg',
           developerName: FIXED_DEVELOPER_NAME,
           developerPoweredBy: FIXED_DEVELOPER_POWERED_BY,
           developerWebsite: FIXED_DEVELOPER_WEBSITE,
         };
-      } catch {
-        return initialSettings;
       }
+    } catch {
+      return initialSettings;
     }
     return initialSettings;
   });
 
-  const [users, setUsers] = useState<User[]>(initialUsers);
-  const [institutions, setInstitutions] = useState<Institution[]>(initialInstitutions);
-  const [branches, setBranches] = useState<Branch[]>(initialBranches);
-  const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
+  const [users, setUsers] = useState<User[]>(() => {
+    return safeLoadJson<User[]>('smf_users', initialUsers);
+  });
+  const [institutions, setInstitutions] = useState<Institution[]>(() => {
+    return safeLoadJson<Institution[]>('smf_institutions', initialInstitutions);
+  });
+  const [branches, setBranches] = useState<Branch[]>(() => {
+    return safeLoadJson<Branch[]>('smf_branches', initialBranches);
+  });
+  const [customers, setCustomers] = useState<Customer[]>(() => {
+    return safeLoadJson<Customer[]>('smf_customers', initialCustomers);
+  });
   const [paymentChannels, setPaymentChannels] = useState<PaymentChannel[]>(initialPaymentChannels);
   const [investments, setInvestments] = useState<Investment[]>(initialInvestments);
   const [borrowings, setBorrowings] = useState<InstitutionalBorrowing[]>(initialBorrowings);
   const [packages, setPackages] = useState<SchemePackage[]>(initialPackages);
-  const [joinedPackages, setJoinedPackages] = useState<JoinedCustomerPackage[]>(initialJoinedPackages);
+  const [joinedPackages, setJoinedPackages] = useState<JoinedCustomerPackage[]>(() => {
+    return safeLoadJson<JoinedCustomerPackage[]>('smf_joined_pkgs', initialJoinedPackages);
+  });
   const [savingsRequests, setSavingsRequests] = useState<GeneralSavingsRequest[]>(initialSavingsRequests);
-  const [loans, setLoans] = useState<CustomerLoanApplication[]>(initialLoans);
+  const [loans, setLoans] = useState<CustomerLoanApplication[]>(() => {
+    return safeLoadJson<CustomerLoanApplication[]>('smf_loans', initialLoans);
+  });
   const [supportTickets, setSupportTickets] = useState<SupportTicket[]>(initialTickets);
   const [kycRecords, setKycRecords] = useState<KycRecord[]>(initialKycRecords);
   const [adjustmentRequests, setAdjustmentRequests] = useState<AdjustmentRequest[]>(initialAdjustmentRequests);
   const [customerMessages, setCustomerMessages] = useState<CustomerMessage[]>(() => {
-    const saved = localStorage.getItem('smf_cust_messages');
-    return saved ? JSON.parse(saved) : [
+    return safeLoadJson<CustomerMessage[]>('smf_cust_messages', [
       {
         id: 'msg-1',
         customerId: 'cust-1',
@@ -243,30 +276,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         sentAt: new Date().toLocaleString(),
         isRead: false,
       }
-    ];
+    ]);
   });
   const [notices, setNotices] = useState<OfficialNotice[]>(() => {
-    const saved = localStorage.getItem('smf_official_notices');
-    return saved ? JSON.parse(saved) : initialNotices;
+    return safeLoadJson<OfficialNotice[]>('smf_official_notices', initialNotices);
   });
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(initialAuditLogs);
   const [firebaseConnected, setFirebaseConnected] = useState<boolean>(true);
   const [isFirebaseSyncing, setIsFirebaseSyncing] = useState<boolean>(false);
 
-  // Sync notices to localStorage
+  // Sync core collections to localStorage
   useEffect(() => {
     try {
+      localStorage.setItem('smf_users', JSON.stringify(users));
+      localStorage.setItem('smf_branches', JSON.stringify(branches));
+      localStorage.setItem('smf_customers', JSON.stringify(customers));
+      localStorage.setItem('smf_loans', JSON.stringify(loans));
+      localStorage.setItem('smf_joined_pkgs', JSON.stringify(joinedPackages));
       localStorage.setItem('smf_official_notices', JSON.stringify(notices));
     } catch {
       // ignore
     }
-  }, [notices]);
+  }, [users, branches, customers, loans, joinedPackages, notices]);
+
+  // Active Institution Context ('all' for super admin, or user's institution)
+  const [activeInstitutionId, setActiveInstitutionIdState] = useState<string>(() => {
+    if (!currentUser) return 'all';
+    if (currentUser.role === 'super_admin') return 'all';
+    return currentUser.institutionId || 'inst-1';
+  });
 
   // Active Branch Context (Scoped for Managers/Staff, selectable/all for Super Admin)
   const [activeBranchId, setActiveBranchIdState] = useState<string>(() => {
     if (!currentUser) return 'all';
     if (currentUser.role === 'super_admin') return 'all';
-    return currentUser.assignedBranchIds?.[0] || currentUser.branchId || 'br-1';
+    return 'all';
   });
 
   const getUserAccessibleBranches = (user?: User | null): Branch[] => {
@@ -275,9 +319,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (targetUser.role === 'super_admin') {
       return branches;
     }
-    const assigned = targetUser.assignedBranchIds || [];
-    const primary = targetUser.branchId;
-    return branches.filter((b) => assigned.includes(b.id) || b.id === primary);
+    const assigned = targetUser.assignedBranchIds && targetUser.assignedBranchIds.length > 0
+      ? targetUser.assignedBranchIds
+      : targetUser.branchId
+      ? [targetUser.branchId]
+      : [];
+    return branches.filter((b) => assigned.includes(b.id) || b.id === targetUser.branchId);
+  };
+
+  const setActiveInstitutionId = (instId: string) => {
+    setActiveInstitutionIdState(instId);
+    // If setting a specific institution, check if active branch still belongs to it
+    if (instId !== 'all') {
+      const instBranches = branches.filter((b) => b.institutionId === instId);
+      if (!instBranches.some((b) => b.id === activeBranchId)) {
+        setActiveBranchIdState('all');
+      }
+    }
   };
 
   const getAccessibleNotices = (user?: User | null): OfficialNotice[] => {
@@ -624,6 +682,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateUser = (u: User) => {
     setUsers((prev) => prev.map((item) => (item.id === u.id ? u : item)));
     if (currentUser?.id === u.id) setCurrentUser(u);
+
+    // If manager, sync branch manager assignment
+    if (u.role === 'branch_manager') {
+      const assigned = u.assignedBranchIds || (u.branchId ? [u.branchId] : []);
+      setBranches((prev) =>
+        prev.map((b) => {
+          if (assigned.includes(b.id)) {
+            return { ...b, managerId: u.id, managerName: u.nameBn };
+          }
+          if (b.managerId === u.id && !assigned.includes(b.id)) {
+            return { ...b, managerId: undefined, managerName: 'অনির্ধারিত' };
+          }
+          return b;
+        })
+      );
+    }
     showToast(lang === 'bn' ? 'ইউজার তথ্য আপডেট হয়েছে' : 'User Updated', 'success');
   };
 
@@ -791,25 +865,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
 
-    // Update Customer branch
+    // Update Customer branch and institution
     setCustomers((prev) =>
       prev.map((c) =>
         c.id === customerId
-          ? { ...c, branchId: newBranchId }
+          ? { ...c, branchId: newBranchId, institutionId: targetBranch.institutionId }
           : c
       )
     );
 
-    // Update linked user branch
+    // Update linked user branch and institution
     if (customer.userId) {
       setUsers((prev) =>
         prev.map((u) =>
           u.id === customer.userId
-            ? { ...u, branchId: newBranchId }
+            ? { ...u, branchId: newBranchId, institutionId: targetBranch.institutionId }
             : u
         )
       );
     }
+
+    // Update customer loans branch
+    setLoans((prev) =>
+      prev.map((l) =>
+        l.customerId === customerId
+          ? { ...l, branchId: newBranchId, institutionId: targetBranch.institutionId }
+          : l
+      )
+    );
+
+    // Update joined packages branch
+    setJoinedPackages((prev) =>
+      prev.map((jp) =>
+        jp.customerId === customerId
+          ? { ...jp, branchId: newBranchId, institutionId: targetBranch.institutionId }
+          : jp
+      )
+    );
 
     const oldBranchName = lang === 'bn' ? oldBranch?.nameBn || customer.branchId : oldBranch?.nameEn || customer.branchId;
     const newBranchName = lang === 'bn' ? targetBranch.nameBn : targetBranch.nameEn;
@@ -1717,6 +1809,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteCustomerMessage,
         activeBranchId,
         setActiveBranchId,
+        activeInstitutionId,
+        setActiveInstitutionId,
         getUserAccessibleBranches,
         getAccessibleNotices,
         saveUserSignatureProfile,

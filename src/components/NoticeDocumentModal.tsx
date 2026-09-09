@@ -226,12 +226,12 @@ export const NoticeDocumentModal: React.FC<NoticeDocumentModalProps> = ({
 
             {/* Top Section */}
             <div>
-              {/* Official Header / Letterhead - Perfectly Centered & Symmetrical */}
-              <div className="text-center pb-5 border-b-2 border-emerald-800 flex flex-col items-center">
-                {/* Logo Centered on Top */}
-                <div className="mb-2">
+              {/* Official Header / Letterhead - Horizontal Compact Layout (Logo on Left, Details on Right) */}
+              <div className="pb-4 border-b-2 border-emerald-800 flex items-center justify-between gap-4">
+                {/* Left: Institution Logo */}
+                <div className="shrink-0">
                   {settings?.logoSvg ? (
-                    <div className="w-14 h-14 rounded-2xl overflow-hidden bg-emerald-700 p-1 flex items-center justify-center shadow-sm">
+                    <div className="w-16 h-16 rounded-2xl overflow-hidden bg-emerald-700 p-1.5 flex items-center justify-center shadow-sm">
                       <img
                         src={settings.logoSvg}
                         alt="Logo"
@@ -240,31 +240,27 @@ export const NoticeDocumentModal: React.FC<NoticeDocumentModalProps> = ({
                       />
                     </div>
                   ) : (
-                    <div className="w-14 h-14 rounded-2xl bg-emerald-800 text-white font-black text-xl flex items-center justify-center shadow-sm">
+                    <div className="w-16 h-16 rounded-2xl bg-emerald-800 text-white font-black text-2xl flex items-center justify-center shadow-sm">
                       SF
                     </div>
                   )}
                 </div>
 
-                {/* Institution Name */}
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-emerald-900 tracking-tight text-center">
-                  {targetInst ? (lang === 'bn' ? targetInst.nameBn : targetInst.nameEn) : (lang === 'bn' ? settings?.siteNameBn : settings?.siteNameEn)}
-                </h1>
-
-                {/* Subtitle / Govt Approval */}
-                <p className="text-xs text-slate-600 font-sans tracking-wide mt-0.5 text-center">
-                  {targetInst?.regNo ? `গণপ্রজাতন্ত্রী বাংলাদেশ সরকার অনুমোদিত • রেজিঃ নং: ${targetInst.regNo}` : 'ক্ষুদ্রঋণ ও সঞ্চয় কার্যক্রম সমবায় ফেডারেশন'}
-                </p>
-
-                {/* Sub Header / Branch & Central Address */}
-                <p className="text-xs text-slate-700 font-sans font-medium mt-1.5 text-center">
-                  {targetBranch ? `${targetBranch.nameBn} (${targetBranch.code}) | ${targetBranch.address}` : (targetInst?.address || 'প্রধান কার্যালয়: ঢাকা, বাংলাদেশ')}
-                </p>
-
-                {/* Contact line */}
-                <p className="text-[11px] text-slate-500 font-sans mt-0.5 text-center">
-                  ফোন: {targetInst?.phone || '০১৯১১-২২৩৩৪৪'} • ইমেইল: {targetInst?.email || 'contact@samriddhi-fms.org'} • ওয়েব: www.samriddhi-fms.org
-                </p>
+                {/* Right: Institution Details */}
+                <div className="flex-1 min-w-0 text-left">
+                  <h1 className="text-xl sm:text-2xl font-extrabold text-emerald-900 tracking-tight leading-tight">
+                    {targetInst ? (lang === 'bn' ? targetInst.nameBn : targetInst.nameEn) : (lang === 'bn' ? settings?.siteNameBn : settings?.siteNameEn)}
+                  </h1>
+                  <p className="text-[11px] text-slate-600 font-sans tracking-wide mt-0.5">
+                    {targetInst?.registrationNo ? `গণপ্রজাতন্ত্রী বাংলাদেশ সরকার অনুমোদিত • রেজিঃ নং: ${targetInst.registrationNo}` : 'ক্ষুদ্রঋণ ও সঞ্চয় কার্যক্রম সমবায় ফেডারেশন'}
+                  </p>
+                  <p className="text-[11px] text-slate-700 font-sans font-medium mt-0.5">
+                    {targetBranch ? `${targetBranch.nameBn} (${targetBranch.code}) | ${targetBranch.addressBn || targetBranch.addressEn || targetBranch.address}` : (targetInst?.centralAddressBn || targetInst?.centralAddressEn || targetInst?.address || 'প্রধান কার্যালয়: ঢাকা, বাংলাদেশ')}
+                  </p>
+                  <p className="text-[10px] text-slate-500 font-sans mt-0.5">
+                    ফোন: {targetInst?.phone || '০১৯১১-২২৩৩৪৪'} • ইমেইল: {targetInst?.email || 'contact@samriddhi-fms.org'}
+                  </p>
+                </div>
               </div>
 
               {/* Scope, Target Audience & Priority Badge Bar */}
@@ -313,10 +309,6 @@ export const NoticeDocumentModal: React.FC<NoticeDocumentModalProps> = ({
                       ⚠️ উচ্চ অগ্রাধিকার
                     </span>
                   )}
-                </div>
-
-                <div className="text-slate-500 font-mono text-[11px]">
-                  শ্রেণি (বিষয়): <span className="font-bold text-slate-800">{notice.category}</span>
                 </div>
               </div>
 
