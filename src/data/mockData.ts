@@ -17,6 +17,7 @@ import {
   GeneralSavingsRequest,
   OfficialNotice,
 } from '../types';
+import { DEFAULT_SAMRIDDHI_LOGO_DATA_URI } from '../utils/logo';
 
 export const initialUsers: User[] = [
   {
@@ -881,7 +882,7 @@ export const initialSettings: SystemSettings = {
   developerPoweredBy: 'TIKMERK IT',
   developerWebsite: 'www.tikmerk.com',
   demoMode: true, // Demo Mode ON by default so Quick Login buttons show
-  logoSvg: '/favicon.svg',
+  logoSvg: DEFAULT_SAMRIDDHI_LOGO_DATA_URI,
   defaultProfitRatePct: 12,
   defaultGovVatPct: 15,
   generalSavingsInterestPct: 6.5,

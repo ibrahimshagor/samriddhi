@@ -27,14 +27,15 @@ import {
 import { firebaseConfig } from '../lib/firebase';
 import { GoogleDriveBackupModal } from '../components/GoogleDriveBackupModal';
 import { getCachedGoogleUser, getActiveDriveToken } from '../lib/googleDriveBackup';
+import { resolveLogo, DEFAULT_SAMRIDDHI_LOGO_DATA_URI, DEFAULT_SAMRIDDHI_LOGO_SVG } from '../utils/logo';
 
 // Curated Banking & Finance SVG Presets
 const LOGO_PRESETS = [
   {
     id: 'default_favicon',
-    nameBn: 'ডিফল্ট সমৃদ্ধি গ্রোথ শিল্ড (সম Favicon)',
+    nameBn: 'ডিফল্ট সমৃদ্ধি গ্রোথ শিল্ড (অফিসিয়াল সম এসভিজি)',
     nameEn: 'Default Samriddhi Growth Emblem',
-    svgUrl: '/favicon.svg',
+    svgData: DEFAULT_SAMRIDDHI_LOGO_SVG,
   },
   {
     id: 'golden_shield',
@@ -64,7 +65,7 @@ export const WebsiteSettings: React.FC = () => {
 
   const [siteNameBn, setSiteNameBn] = useState(settings.siteNameBn);
   const [siteNameEn, setSiteNameEn] = useState(settings.siteNameEn);
-  const [logoSvg, setLogoSvg] = useState<string>(settings.logoSvg || '/favicon.svg');
+  const [logoSvg, setLogoSvg] = useState<string>(() => resolveLogo(settings.logoSvg));
   const [noticeBannerBn, setNoticeBannerBn] = useState(settings.noticeBannerBn || '');
   const [demoMode, setDemoMode] = useState(settings.demoMode);
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -357,10 +358,10 @@ export const WebsiteSettings: React.FC = () => {
               </div>
             </div>
 
-            {logoSvg !== '/favicon.svg' && (
+            {logoSvg !== DEFAULT_SAMRIDDHI_LOGO_DATA_URI && (
               <button
                 type="button"
-                onClick={() => setLogoSvg('/favicon.svg')}
+                onClick={() => setLogoSvg(DEFAULT_SAMRIDDHI_LOGO_DATA_URI)}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs font-bold transition-all shadow-2xs cursor-pointer"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
@@ -429,17 +430,18 @@ export const WebsiteSettings: React.FC = () => {
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {LOGO_PRESETS.map((preset) => {
+                    const presetUri = preset.svgData
+                      ? `data:image/svg+xml;utf8,${encodeURIComponent(preset.svgData)}`
+                      : '';
                     const isSelected =
-                      preset.svgUrl === logoSvg ||
+                      logoSvg === presetUri ||
                       (preset.svgData && logoSvg.includes(encodeURIComponent(preset.svgData.substring(0, 30))));
                     return (
                       <button
                         key={preset.id}
                         type="button"
                         onClick={() => {
-                          if (preset.svgUrl) {
-                            setLogoSvg(preset.svgUrl);
-                          } else if (preset.svgData) {
+                          if (preset.svgData) {
                             setLogoSvg(`data:image/svg+xml;utf8,${encodeURIComponent(preset.svgData)}`);
                           }
                           showToast(lang === 'bn' ? `${preset.nameBn} নির্বাচন করা হয়েছে` : 'Preset Selected', 'info');
@@ -452,7 +454,7 @@ export const WebsiteSettings: React.FC = () => {
                       >
                         <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0 bg-emerald-800 flex items-center justify-center p-0.5">
                           <img
-                            src={preset.svgUrl || `data:image/svg+xml;utf8,${encodeURIComponent(preset.svgData || '')}`}
+                            src={presetUri}
                             alt={preset.nameEn}
                             className="w-full h-full object-cover"
                             referrerPolicy="no-referrer"
@@ -485,10 +487,14 @@ export const WebsiteSettings: React.FC = () => {
                 <div className="flex items-center gap-2.5 bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200/60 dark:border-slate-800">
                   <div className="w-9 h-9 rounded-xl overflow-hidden shadow-sm flex items-center justify-center bg-emerald-700 shrink-0">
                     <img
-                      src={logoSvg}
+                      src={resolveLogo(logoSvg)}
                       alt="Header Logo Preview"
                       className="w-full h-full object-cover"
                       referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = DEFAULT_SAMRIDDHI_LOGO_DATA_URI;
+                      }}
                     />
                   </div>
                   <div className="min-w-0">
@@ -510,10 +516,14 @@ export const WebsiteSettings: React.FC = () => {
                 <div className="flex items-center gap-2.5 bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200/60 dark:border-slate-800">
                   <div className="w-8 h-8 rounded-xl overflow-hidden shadow-sm flex items-center justify-center bg-emerald-700 shrink-0">
                     <img
-                      src={logoSvg}
+                      src={resolveLogo(logoSvg)}
                       alt="Sidebar Logo Preview"
                       className="w-full h-full object-cover"
                       referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = DEFAULT_SAMRIDDHI_LOGO_DATA_URI;
+                      }}
                     />
                   </div>
                   <div className="min-w-0">

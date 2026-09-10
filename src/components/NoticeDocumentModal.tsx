@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { OfficialNotice } from '../types';
 import { useApp } from '../context/AppContext';
+import { resolveLogo, DEFAULT_SAMRIDDHI_LOGO_DATA_URI } from '../utils/logo';
 import {
   Printer,
   Download,
@@ -230,20 +231,18 @@ export const NoticeDocumentModal: React.FC<NoticeDocumentModalProps> = ({
               <div className="pb-4 border-b-2 border-emerald-800 flex items-center justify-between gap-4">
                 {/* Left: Institution Logo */}
                 <div className="shrink-0">
-                  {settings?.logoSvg ? (
-                    <div className="w-16 h-16 rounded-2xl overflow-hidden bg-emerald-700 p-1.5 flex items-center justify-center shadow-sm">
-                      <img
-                        src={settings.logoSvg}
-                        alt="Logo"
-                        className="w-full h-full object-cover"
-                        referrerPolicy="no-referrer"
-                      />
-                    </div>
-                  ) : (
-                    <div className="w-16 h-16 rounded-2xl bg-emerald-800 text-white font-black text-2xl flex items-center justify-center shadow-sm">
-                      SF
-                    </div>
-                  )}
+                  <div className="w-16 h-16 rounded-2xl overflow-hidden bg-emerald-700 p-1.5 flex items-center justify-center shadow-sm">
+                    <img
+                      src={resolveLogo(settings?.logoSvg)}
+                      alt="Logo"
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = DEFAULT_SAMRIDDHI_LOGO_DATA_URI;
+                      }}
+                    />
+                  </div>
                 </div>
 
                 {/* Right: Institution Details */}

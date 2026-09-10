@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { DigitalIdCard } from './DigitalIdCard';
 import { GoogleDriveBackupModal } from './GoogleDriveBackupModal';
+import { resolveLogo, DEFAULT_SAMRIDDHI_LOGO_DATA_URI } from '../utils/logo';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -164,20 +165,18 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
             </button>
 
             <div className="flex items-center gap-2.5">
-              {settings?.logoSvg ? (
-                <div className="w-9 h-9 rounded-xl overflow-hidden shadow-md shadow-emerald-600/20 flex items-center justify-center bg-emerald-700 shrink-0">
-                  <img
-                    src={settings.logoSvg}
-                    alt="Logo"
-                    className="w-full h-full object-cover"
-                    referrerPolicy="no-referrer"
-                  />
-                </div>
-              ) : (
-                <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-black text-lg shadow-md shadow-emerald-600/20 shrink-0">
-                  সম
-                </div>
-              )}
+              <div className="w-9 h-9 rounded-xl overflow-hidden shadow-md shadow-emerald-600/20 flex items-center justify-center bg-emerald-700 shrink-0">
+                <img
+                  src={resolveLogo(settings?.logoSvg)}
+                  alt="Logo"
+                  className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = DEFAULT_SAMRIDDHI_LOGO_DATA_URI;
+                  }}
+                />
+              </div>
               <div className="hidden sm:block">
                 <h1 className="font-extrabold text-base text-slate-900 dark:text-white leading-tight">
                   {lang === 'bn' ? settings.siteNameBn : settings.siteNameEn}

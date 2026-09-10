@@ -49,6 +49,7 @@ import {
   loadFromFirestore,
 } from '../lib/firestoreSync';
 import { testFirestoreConnection, firebaseConfig } from '../lib/firebase';
+import { resolveLogo, DEFAULT_SAMRIDDHI_LOGO_DATA_URI } from '../utils/logo';
 
 export const FIXED_DEVELOPER_NAME = 'Md. Ibrahim Hossain';
 export const FIXED_DEVELOPER_POWERED_BY = 'TIKMERK IT';
@@ -227,7 +228,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return {
           ...initialSettings,
           ...parsed,
-          logoSvg: parsed.logoSvg || initialSettings.logoSvg || './favicon.svg',
+          logoSvg: resolveLogo(parsed.logoSvg || initialSettings.logoSvg),
           developerName: FIXED_DEVELOPER_NAME,
           developerPoweredBy: FIXED_DEVELOPER_POWERED_BY,
           developerWebsite: FIXED_DEVELOPER_WEBSITE,
@@ -1675,6 +1676,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setSettings((prev) => ({
       ...prev,
       ...newSettings,
+      logoSvg: newSettings.logoSvg !== undefined ? resolveLogo(newSettings.logoSvg) : prev.logoSvg,
       developerName: FIXED_DEVELOPER_NAME,
       developerPoweredBy: FIXED_DEVELOPER_POWERED_BY,
       developerWebsite: FIXED_DEVELOPER_WEBSITE,
