@@ -23,7 +23,7 @@ export const AdjustmentRequests: React.FC = () => {
     currentUser,
     customers,
     adjustmentRequests,
-    schemePackages,
+    packages,
     paymentChannels,
     submitAdjustmentRequest,
     reviewAdjustmentRequest,
@@ -36,7 +36,7 @@ export const AdjustmentRequests: React.FC = () => {
   // Form State
   const [targetCustomerId, setTargetCustomerId] = useState(currentUser?.id || '');
   const [customerSearch, setCustomerSearch] = useState('');
-  const [packageId, setPackageId] = useState((schemePackages || [])[0]?.id || 'general');
+  const [packageId, setPackageId] = useState((packages || [])[0]?.id || 'general');
   const [paymentChannelId, setPaymentChannelId] = useState((paymentChannels || [])[0]?.id || 'cash');
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
   const [accountNoUsed, setAccountNoUsed] = useState(currentUser?.mobile || '');
@@ -49,7 +49,7 @@ export const AdjustmentRequests: React.FC = () => {
   const isStaffOrAdmin =
     currentUser.role === 'super_admin' || currentUser.role === 'branch_manager' || currentUser.role === 'branch_staff';
 
-  const selectedPkg = (schemePackages || []).find((p) => p.id === packageId);
+  const selectedPkg = (packages || []).find((p) => p.id === packageId);
   const selectedChannel = (paymentChannels || []).find((c) => c.id === paymentChannelId);
 
   // Filtered customer list for search inside modal
@@ -375,9 +375,9 @@ export const AdjustmentRequests: React.FC = () => {
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs outline-none font-bold"
                   >
                     <option value="general">সাধারণ সঞ্চয় হিসাব</option>
-                    {(schemePackages || []).map((pkg) => (
+                    {(packages || []).map((pkg) => (
                       <option key={pkg.id} value={pkg.id}>
-                        {pkg.titleBn} ({pkg.category})
+                        {pkg.titleBn} ({pkg.type})
                       </option>
                     ))}
                   </select>

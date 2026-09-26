@@ -135,7 +135,11 @@ service cloud.firestore {
       allow read, write: if isBranchStaffOrManager();
     }
 
-    // 10. System Settings & Audit Logs:
+    // 10. System Settings & Audit Logs & Health:
+    match /system/{docId} {
+      allow read: if true;
+      allow write: if isSuperAdmin();
+    }
     match /settings/{docId} {
       allow read: if isAuthenticated();
       allow write: if isSuperAdmin();

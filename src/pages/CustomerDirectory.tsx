@@ -725,7 +725,7 @@ export const CustomerDirectory: React.FC<{ onNavigate?: (page: string) => void }
                     .filter((b) => b.id !== transferCust.branchId)
                     .map((b) => (
                       <option key={b.id} value={b.id}>
-                        {lang === 'bn' ? b.nameBn : b.nameEn} ({b.code}) - {b.address}
+                        {lang === 'bn' ? b.nameBn : b.nameEn} ({b.code}) - {b.addressBn || b.addressEn}
                       </option>
                     ))}
                 </select>
@@ -824,7 +824,7 @@ export const CustomerDirectory: React.FC<{ onNavigate?: (page: string) => void }
                   <option value="general">সাধারণ সঞ্চয় হিসাব (General Savings)</option>
                   {(packages || []).map((pkg) => (
                     <option key={pkg.id} value={pkg.id}>
-                      {pkg.titleBn} ({pkg.category})
+                      {pkg.titleBn} ({pkg.type})
                     </option>
                   ))}
                 </select>

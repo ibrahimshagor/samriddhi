@@ -15,7 +15,7 @@ export const SupportComplaints: React.FC = () => {
   const [replyTextMap, setReplyTextMap] = useState<Record<string, string>>({});
 
   if (!currentUser) return null;
-  const isStaffOrAdmin = currentUser.role === 'super_admin' || currentUser.role === 'branch_manager' || currentUser.role === 'field_officer';
+  const isStaffOrAdmin = currentUser.role === 'super_admin' || currentUser.role === 'branch_manager' || currentUser.role === 'branch_staff';
 
   const filteredTickets = (supportTickets || []).filter((t) => {
     const query = (searchQuery || '').toLowerCase();
@@ -142,9 +142,9 @@ export const SupportComplaints: React.FC = () => {
                 <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
                   {isStaffOrAdmin && (
                     <button
-                      onClick={() => updateTicketStatus(t.id, t.status === 'resolved' ? 'pending' : 'resolved')}
+                      onClick={() => updateTicketStatus(t.id, (t.status === 'resolved' || t.status === 'solved') ? 'pending' : 'resolved')}
                       className={`px-3 py-1.5 rounded-xl font-extrabold text-xs shadow-xs flex items-center gap-1 cursor-pointer ${
-                        t.status === 'resolved'
+                        t.status === 'resolved' || t.status === 'solved'
                           ? 'bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-200'
                           : 'bg-emerald-600 hover:bg-emerald-700 text-white'
                       }`}

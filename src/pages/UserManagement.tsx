@@ -20,7 +20,7 @@ export const UserManagement: React.FC = () => {
     const nameBn = (u.nameBn || '').toLowerCase();
     const nameEn = (u.nameEn || '').toLowerCase();
     const membershipId = (u.membershipId || '').toLowerCase();
-    const username = (u.username || '').toLowerCase();
+    const username = ('username' in u ? (u as any).username || '' : '').toLowerCase();
     const mobile = (u.mobile || '').toLowerCase();
     return nameBn.includes(query) || nameEn.includes(query) || membershipId.includes(query) || username.includes(query) || mobile.includes(query);
   });

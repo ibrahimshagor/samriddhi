@@ -1,22 +1,40 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore, doc, getDocFromServer, enableIndexedDbPersistence } from 'firebase/firestore';
+import {
+  initializeFirestore,
+  getFirestore,
+  doc,
+  getDocFromServer,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+} from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
+import firebaseAppletConfig from '../../firebase-applet-config.json';
 
-// User's Firebase Configuration
+// User's Firebase Configuration synced with provisioned environment
 export const firebaseConfig = {
-  apiKey: "AIzaSyD5lNrHljqrxDFsOQhoGe1SlWhNVKf4oU4",
-  authDomain: "samriddhi-fms.firebaseapp.com",
-  projectId: "samriddhi-fms",
-  storageBucket: "samriddhi-fms.firebasestorage.app",
-  messagingSenderId: "377605482689",
-  appId: "1:377605482689:web:7927673fddf4fce06e4c40"
+  apiKey: firebaseAppletConfig?.apiKey || "AIzaSyBk59R7bH8k4vDVJbi7dv1XDd-7IbRg--8",
+  authDomain: firebaseAppletConfig?.authDomain || "gen-lang-client-0442642731.firebaseapp.com",
+  projectId: firebaseAppletConfig?.projectId || "gen-lang-client-0442642731",
+  storageBucket: firebaseAppletConfig?.storageBucket || "gen-lang-client-0442642731.firebasestorage.app",
+  messagingSenderId: firebaseAppletConfig?.messagingSenderId || "61531064213",
+  appId: firebaseAppletConfig?.appId || "1:61531064213:web:dbb9c6942bace417a2d89c",
 };
 
 // Initialize Firebase singleton
 export const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+
+// Initialize Firestore with robust local caching
+let firestoreDb;
+try {
+  firestoreDb = initializeFirestore(app, {
+    localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+  });
+} catch {
+  firestoreDb = getFirestore(app);
+}
+export const db = firestoreDb;
 export const storage = getStorage(app);
 
 export enum OperationType {
@@ -67,14 +85,27 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 }
 
 export async function testFirestoreConnection(): Promise<{ connected: boolean; message: string }> {
+  // If the browser or environment is offline, avoid throwing network errors
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    return { connected: false, message: 'Offline mode active' };
+  }
+
   try {
-    await getDocFromServer(doc(db, 'system', 'connection_test'));
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Connection check timed out')), 4000)
+    );
+    const checkPromise = getDocFromServer(doc(db, 'system', 'connection_test'));
+    await Promise.race([checkPromise, timeoutPromise]);
     return { connected: true, message: 'Connected to Firebase Firestore' };
   } catch (error: any) {
-    if (error?.message?.includes('the client is offline') || error?.code === 'unavailable') {
-      return { connected: false, message: 'Offline or connection issue' };
+    if (
+      error?.message?.includes('the client is offline') ||
+      error?.message?.includes('timed out') ||
+      error?.code === 'unavailable'
+    ) {
+      return { connected: false, message: 'Offline or server unreachable' };
     }
-    // If permission-denied or document not found, the network connection to project was made
+    // If permission-denied or document not found, the network connection to project was verified
     return { connected: true, message: 'Firebase project online' };
   }
 }

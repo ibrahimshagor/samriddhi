@@ -24,6 +24,7 @@ import {
 import { DigitalIdCard } from './DigitalIdCard';
 import { GoogleDriveBackupModal } from './GoogleDriveBackupModal';
 import { resolveLogo, DEFAULT_SAMRIDDHI_LOGO_DATA_URI } from '../utils/logo';
+import { firebaseConfig } from '../lib/firebase';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -217,7 +218,11 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
                   ? 'bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800/40'
                   : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
               }`}
-              title={lang === 'bn' ? 'ফায়ারবেস ক্লাউড কানেক্টেড (samriddhi-fms)' : 'Firebase Cloud Connected (samriddhi-fms)'}
+              title={
+                firebaseConnected
+                  ? (lang === 'bn' ? `ফায়ারবেস ক্লাউড কানেক্টেড (${firebaseConfig.projectId})` : `Firebase Connected (${firebaseConfig.projectId})`)
+                  : (lang === 'bn' ? 'ফায়ারবেস অফলাইন মোড (লোকাল ক্যাশ সক্রিয়)' : 'Firebase Offline Mode (Local Cache Active)')
+              }
             >
               <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
               <span className="hidden xl:inline">Firebase</span>

@@ -254,7 +254,7 @@ export const NoticeDocumentModal: React.FC<NoticeDocumentModalProps> = ({
                     {targetInst?.registrationNo ? `গণপ্রজাতন্ত্রী বাংলাদেশ সরকার অনুমোদিত • রেজিঃ নং: ${targetInst.registrationNo}` : 'ক্ষুদ্রঋণ ও সঞ্চয় কার্যক্রম সমবায় ফেডারেশন'}
                   </p>
                   <p className="text-[11px] text-slate-700 font-sans font-medium mt-0.5">
-                    {targetBranch ? `${targetBranch.nameBn} (${targetBranch.code}) | ${targetBranch.addressBn || targetBranch.addressEn || targetBranch.address}` : (targetInst?.centralAddressBn || targetInst?.centralAddressEn || targetInst?.address || 'প্রধান কার্যালয়: ঢাকা, বাংলাদেশ')}
+                    {targetBranch ? `${targetBranch.nameBn} (${targetBranch.code}) | ${targetBranch.addressBn || targetBranch.addressEn || ''}` : (targetInst?.centralAddressBn || targetInst?.centralAddressEn || 'প্রধান কার্যালয়: ঢাকা, বাংলাদেশ')}
                   </p>
                   <p className="text-[10px] text-slate-500 font-sans mt-0.5">
                     ফোন: {targetInst?.phone || '০১৯১১-২২৩৩৪৪'} • ইমেইল: {targetInst?.email || 'contact@samriddhi-fms.org'}

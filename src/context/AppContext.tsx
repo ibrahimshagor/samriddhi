@@ -170,7 +170,8 @@ interface AppContextType {
 
   createTicket: (ticket: Omit<SupportTicket, 'id' | 'status' | 'createdAt' | 'replies'>) => void;
   replyTicket: (ticketId: string, message: string) => void;
-  updateTicketStatus: (ticketId: string, status: 'pending' | 'in_progress' | 'solved') => void;
+  addTicketReply: (ticketId: string, userName: string, role: string, message: string) => void;
+  updateTicketStatus: (ticketId: string, status: 'pending' | 'in_progress' | 'solved' | 'resolved') => void;
   deleteTicket: (ticketId: string) => void;
 
   saveKyc: (kyc: Omit<KycRecord, 'id' | 'updatedAt'>) => void;
@@ -1363,7 +1364,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         senderDisplayName = `${currentUser.nameBn} (সুপার অ্যাডমিন)`;
       } else if (currentUser.role === 'branch_manager') {
         senderDisplayName = `${currentUser.nameBn} (শাখা ব্যবস্থাপক)`;
-      } else if (currentUser.role === 'staff') {
+      } else if (currentUser.role === 'branch_staff') {
         senderDisplayName = `${currentUser.nameBn} (অফিস স্টাফ)`;
       } else {
         senderDisplayName = currentUser.nameBn;
@@ -1462,7 +1463,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast(lang === 'bn' ? 'উত্তর প্রদান করা হয়েছে' : 'Reply Posted', 'success');
   };
 
-  const updateTicketStatus = (ticketId: string, status: 'pending' | 'in_progress' | 'solved') => {
+  const addTicketReply = (ticketId: string, userName: string, role: string, message: string) => {
+    setSupportTickets((prev) =>
+      prev.map((t) => {
+        if (t.id === ticketId) {
+          const newRep = {
+            id: 'rep-' + Date.now(),
+            userName: userName || (currentUser ? `${currentUser.nameBn} (${currentUser.role})` : 'System'),
+            role: role || currentUser?.role || 'staff',
+            message,
+            createdAt: new Date().toLocaleString(),
+          };
+          return {
+            ...t,
+            status: t.status === 'pending' ? 'in_progress' : t.status,
+            replies: [...t.replies, newRep],
+          };
+        }
+        return t;
+      })
+    );
+    showToast(lang === 'bn' ? 'উত্তর প্রদান করা হয়েছে' : 'Reply Posted', 'success');
+  };
+
+  const updateTicketStatus = (ticketId: string, status: 'pending' | 'in_progress' | 'solved' | 'resolved') => {
     setSupportTickets((prev) => prev.map((t) => (t.id === ticketId ? { ...t, status } : t)));
     showToast(lang === 'bn' ? 'টিকিটের স্ট্যাটাস পরিবর্তিত হয়েছে' : 'Ticket Status Updated', 'info');
   };
@@ -1846,6 +1870,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         createTicket,
         replyTicket,
+        addTicketReply,
         updateTicketStatus,
         deleteTicket,
 

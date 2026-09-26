@@ -77,6 +77,7 @@ export interface Customer {
   presentAddress?: string;
   permanentAddress?: string;
   occupation?: string;
+  photoUrl?: string;
 }
 
 export interface PaymentChannel {
@@ -93,6 +94,9 @@ export interface PaymentChannel {
   isActive: boolean;
   isGlobal: boolean;
   logoUrl?: string;
+  providerNameBn?: string;
+  providerNameEn?: string;
+  accountNumber?: string;
 }
 
 export type InvestmentType =
@@ -224,6 +228,7 @@ export interface GeneralSavingsRequest {
   customerNameBn: string;
   customerNameEn: string;
   customerMobile?: string;
+  senderMobile?: string;
   branchId: string;
   type: 'deposit' | 'withdrawal';
   amount: number;
@@ -234,6 +239,7 @@ export interface GeneralSavingsRequest {
   payoutMethod?: string;
   payoutAccount?: string;
   note?: string;
+  notes?: string;
   status: 'pending' | 'approved' | 'rejected';
   reviewedBy?: string;
   createdAt: string;
@@ -247,6 +253,8 @@ export interface CustomerLoanApplication {
   customerNameEn: string;
   packageId: string;
   branchId: string;
+  institutionId?: string;
+  loanType?: string;
   requestedAmount: number;
   tenureMonths: number;
   interestRatePct: number;
@@ -264,14 +272,17 @@ export interface CustomerLoanApplication {
 export interface SupportTicket {
   id: string;
   ticketNo?: string;
-  customerId: string;
-  customerNameBn: string;
-  customerNameEn: string;
+  customerId?: string;
+  userId?: string;
+  userName?: string;
+  customerNameBn?: string;
+  customerNameEn?: string;
   branchId: string;
-  subjectBn: string;
-  subjectEn: string;
-  categoryBn: string;
-  categoryEn: string;
+  subject?: string;
+  subjectBn?: string;
+  subjectEn?: string;
+  categoryBn?: string;
+  categoryEn?: string;
   message: string;
   paymentRef?: string;
   priority?: 'low' | 'medium' | 'high';
@@ -346,12 +357,15 @@ export interface AdjustmentRequest {
   packageNameBn?: string;
   packageNameEn?: string;
   amount: number;
+  type?: 'add' | 'deduct';
   paymentDate: string;
   paymentChannelId: string;
   channelNameBn: string;
   channelNameEn: string;
   accountNoUsed: string;
   transactionId: string;
+  reason?: string;
+  requestedByName?: string;
   note?: string;
   status: 'pending' | 'approved' | 'rejected';
   reviewedBy?: string;

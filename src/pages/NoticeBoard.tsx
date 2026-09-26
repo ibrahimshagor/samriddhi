@@ -93,7 +93,7 @@ export const NoticeBoard: React.FC = () => {
     showWatermark: boolean;
     watermarkText: string;
     signatureImageUrl: string;
-    status: 'published' | 'draft';
+    status: 'published' | 'draft' | 'archived';
   }>({
     titleBn: '',
     titleEn: '',
@@ -953,7 +953,7 @@ export const NoticeBoard: React.FC = () => {
                       >
                         {institutions.map((i) => (
                           <option key={i.id} value={i.id}>
-                            {i.nameBn} ({i.code})
+                            {i.nameBn} {i.registrationNo ? `(${i.registrationNo})` : ''}
                           </option>
                         ))}
                       </select>
